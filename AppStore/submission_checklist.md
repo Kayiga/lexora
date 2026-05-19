@@ -54,7 +54,7 @@
 - [ ] Upload screenshots exported from Xcode (5 frames, see `AppStoreScreenshots.swift`)
 - [ ] Add Privacy Policy URL — `docs/privacy.html` is ready for GitHub Pages
   > In your repo: Settings → Pages → Source: `main` branch, `/docs` folder → Save
-  > URL will be: `https://YOUR_USERNAME.github.io/lexora/privacy.html`
+  > URL will be: `https://kayiga.github.io/lexora/privacy.html`
 
 ### GitHub Secrets (10 minutes, required for CI)
 Follow `.github/CI_SETUP.md` — add all 8 secrets to your repo Settings → Secrets → Actions:
@@ -73,10 +73,9 @@ Follow `.github/CI_SETUP.md` — add all 8 secrets to your repo Settings → Sec
 ### Trigger first TestFlight build
 ```bash
 cd "/Users/yiga/Documents/Personal/The World of AI/Claude WorkSpace/Outputs/LinguaFlow"
-git init && git add . && git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/lexora.git
+git remote add origin https://github.com/kayiga/lexora.git
 git push -u origin main
-git tag v1.0.0 && git push origin v1.0.0
+git push origin v1.0.0
 ```
 CI will build → test → archive → upload to TestFlight automatically.
 

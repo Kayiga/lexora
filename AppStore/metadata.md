@@ -88,16 +88,14 @@ Optional: add your OpenAI API key in Settings to unlock AI-powered summaries and
 
 ## Support URL
 
-https://github.com/yiga/lexora/issues
-*(Replace with your actual support page or email address before submitting)*
+https://github.com/kayiga/lexora/issues
 
 ---
 
 ## Privacy Policy URL
 
 *(Required for apps that use a keyboard extension or access contacts.)*
-https://lexora.app/privacy
-*(Replace with your actual privacy policy URL)*
+https://kayiga.github.io/lexora/privacy.html
 
 **Minimum privacy policy must state:**
 - App does not collect personal data on behalf of the developer
