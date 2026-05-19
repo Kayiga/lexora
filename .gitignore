@@ -1,0 +1,35 @@
+# Xcode build artifacts
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# User-specific Xcode files
+*.xcuserstate
+xcuserdata/
+
+# Xcode generated files
+*.xcscmblueprint
+*.xccheckout
+
+# macOS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Swift Package Manager
+.build/
+*.resolved
+Packages/
+
+# Environment / secrets
+.env
+*.p8
+*.p12
+*.mobileprovision
+
+# Log files
+*.log

@@ -1,0 +1,199 @@
+name: Build & Upload to TestFlight
+
+# ── Triggers ────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ main ]
+    tags:     [ 'v*' ]           # e.g. v2.0.1 — also triggers on release tags
+  workflow_dispatch:              # manual trigger from the Actions tab
+
+# ── Concurrency — cancel in-flight runs on the same branch ──────────────────
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: true
+
+# ── Environment ─────────────────────────────────────────────────────────────
+env:
+  XCODE_VERSION:    '16.2'        # Pin to the Xcode version used in development
+  SCHEME:           'Lexora'
+  WORKSPACE:        'Lexora.xcworkspace'  # or Lexora.xcodeproj if no workspace
+  BUNDLE_ID:        'com.yiga.Lexora'
+  APP_STORE_CONNECT_KEY_ID:        ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+  APP_STORE_CONNECT_ISSUER_ID:     ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+  TEAM_ID:          ${{ secrets.APPLE_TEAM_ID }}
+
+jobs:
+  build-and-upload:
+    name: Archive → TestFlight
+    runs-on: macos-15             # Xcode 16 requires macOS 15 (Sequoia) runner
+
+    steps:
+
+    # ── 1. Checkout ──────────────────────────────────────────────────────────
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ── 2. Select Xcode version ──────────────────────────────────────────────
+    - name: Select Xcode ${{ env.XCODE_VERSION }}
+      run: sudo xcode-select -s /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+    # ── 3. Install Apple certificates & provisioning profiles ────────────────
+    #   Secrets needed:
+    #     BUILD_CERTIFICATE_BASE64        — p12 export of your Distribution certificate, base64 encoded
+    #     BUILD_CERTIFICATE_PASSWORD      — p12 export password
+    #     BUILD_PROVISION_PROFILE_BASE64  — App Store provisioning profile (.mobileprovision), base64 encoded
+    #     KEYCHAIN_PASSWORD               — arbitrary password for the temporary CI keychain
+    - name: Install certificate and provisioning profile
+      env:
+        BUILD_CERTIFICATE_BASE64:       ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+        BUILD_CERTIFICATE_PASSWORD:     ${{ secrets.BUILD_CERTIFICATE_PASSWORD }}
+        BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        KEYCHAIN_PASSWORD:              ${{ secrets.KEYCHAIN_PASSWORD }}
+      run: |
+        # Decode certificate
+        CERT_PATH=$RUNNER_TEMP/dist_cert.p12
+        echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+
+        # Decode provisioning profile
+        PP_PATH=$RUNNER_TEMP/lexora_appstore.mobileprovision
+        echo "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+        # Create a temporary keychain
+        KEYCHAIN_PATH=$RUNNER_TEMP/ci.keychain-db
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+        # Import certificate
+        security import "$CERT_PATH" \
+          -P "$BUILD_CERTIFICATE_PASSWORD" \
+          -A -t cert -f pkcs12 \
+          -k "$KEYCHAIN_PATH"
+        security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+        # Install provisioning profile
+        PP_UUID=$(grep -a -A 1 'UUID' "$PP_PATH" | grep -o '[-A-Z0-9]\{36\}')
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PP_UUID".mobileprovision
+
+    # ── 4. Cache SPM / derived data ──────────────────────────────────────────
+    - name: Cache DerivedData
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Developer/Xcode/DerivedData
+        key: ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.swift', '**/*.xcodeproj/**') }}
+        restore-keys: |
+          ${{ runner.os }}-deriveddata-
+
+    # ── 5. Resolve Swift Package dependencies ────────────────────────────────
+    - name: Resolve Swift packages
+      run: |
+        xcodebuild -resolvePackageDependencies \
+          -workspace "$WORKSPACE" \
+          -scheme "$SCHEME" \
+          -clonedSourcePackagesDirPath .spm-packages
+
+    # ── 6. Run unit tests ────────────────────────────────────────────────────
+    - name: Run tests
+      run: |
+        xcodebuild test \
+          -workspace "$WORKSPACE" \
+          -scheme "$SCHEME" \
+          -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=latest' \
+          -resultBundlePath TestResults.xcresult \
+          | xcpretty --color --report junit --output test-report.xml || true
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          TestResults.xcresult
+          test-report.xml
+
+    # ── 7. Archive ───────────────────────────────────────────────────────────
+    - name: Archive
+      run: |
+        xcodebuild archive \
+          -workspace "$WORKSPACE" \
+          -scheme "$SCHEME" \
+          -configuration Release \
+          -destination 'generic/platform=iOS' \
+          -archivePath "$RUNNER_TEMP/Lexora.xcarchive" \
+          DEVELOPMENT_TEAM="$TEAM_ID" \
+          CODE_SIGN_STYLE=Manual \
+          CODE_SIGN_IDENTITY="Apple Distribution" \
+          PROVISIONING_PROFILE_SPECIFIER="Lexora App Store" \
+          | xcpretty --color
+
+    # ── 8. Export IPA ────────────────────────────────────────────────────────
+    - name: Export IPA
+      run: |
+        cat > $RUNNER_TEMP/ExportOptions.plist << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>$(TEAM_ID)</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+                <key>$(BUNDLE_ID)</key>
+                <string>Lexora App Store</string>
+            </dict>
+        </dict>
+        </plist>
+        EOF
+
+        # Substitute actual team ID into the plist
+        sed -i '' "s/\$(TEAM_ID)/$TEAM_ID/g" $RUNNER_TEMP/ExportOptions.plist
+        sed -i '' "s/\$(BUNDLE_ID)/$BUNDLE_ID/g" $RUNNER_TEMP/ExportOptions.plist
+
+        xcodebuild -exportArchive \
+          -archivePath "$RUNNER_TEMP/Lexora.xcarchive" \
+          -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+          -exportPath "$RUNNER_TEMP/export" \
+          | xcpretty --color
+
+    # ── 9. Install App Store Connect API key ─────────────────────────────────
+    #   Secret needed:
+    #     APP_STORE_CONNECT_API_KEY_BASE64 — the .p8 key file contents, base64 encoded
+    - name: Install App Store Connect API key
+      run: |
+        mkdir -p ~/.appstoreconnect/private_keys
+        echo "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" \
+          | base64 --decode \
+          > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+    # ── 10. Upload to TestFlight ──────────────────────────────────────────────
+    - name: Upload to TestFlight via altool
+      run: |
+        xcrun altool --upload-app \
+          --type ios \
+          --file "$RUNNER_TEMP/export/Lexora.ipa" \
+          --apiKey  "$APP_STORE_CONNECT_KEY_ID" \
+          --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+    # ── 11. Upload archive as artifact (for debugging) ───────────────────────
+    - name: Upload archive artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Lexora-archive
+        path: ${{ runner.temp }}/Lexora.xcarchive
+        retention-days: 7
+
+    # ── 12. Clean up keychain ────────────────────────────────────────────────
+    - name: Clean up keychain
+      if: always()
+      run: |
+        security delete-keychain "$RUNNER_TEMP/ci.keychain-db" || true

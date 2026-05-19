@@ -1,0 +1,51 @@
+{
+  "identifier" : "E4A1B2C3-D5E6-F7A8-B9C0-D1E2F3A4B5C6",
+  "nonConsumableProducts" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "1F2A3B4C-5D6E-7F8A-9B0C-1D2E3F4A5B6C",
+      "localizations" : [
+        {
+          "description" : "Unlock Lexora Premium: unlimited session history, AI-powered insights (summary, action items, follow-ups), reading mode, HTML & Obsidian export, and full analytics. One-time purchase, no subscription.",
+          "displayName" : "Lexora Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.yiga.Lexora.premium",
+      "referenceName" : "Lexora Premium",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_customerInfoCacheEnabled" : true,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      }
+    ]
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 2,
+    "minor" : 0,
+    "patch" : 0
+  }
+}

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lexora — Privacy Policy</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1c1c1e;
+      --muted: #6e6e73;
+      --accent: #007aff;
+      --border: #e5e5ea;
+      --card: #f2f2f7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --text: #f2f2f7;
+        --muted: #8e8e93;
+        --accent: #0a84ff;
+        --border: #38383a;
+        --card: #1c1c1e;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 2rem 1rem 4rem;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .app-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #5e5ce6, #007aff);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .app-icon svg {
+      width: 44px;
+      height: 44px;
+      fill: white;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--card);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.8rem;
+      margin-top: 0.75rem;
+    }
+    .tl-dr {
+      background: var(--card);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .tl-dr strong { font-size: 1rem; }
+    .tl-dr p { margin-top: 0.4rem; color: var(--muted); font-size: 0.95rem; }
+    section {
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h2 .icon {
+      font-size: 1.1rem;
+    }
+    p, li {
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+    ul {
+      padding-left: 1.25rem;
+    }
+    li { margin-top: 0.4rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="app-icon">
+        <!-- Microphone icon -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 3.5v7a1.5 1.5 0 0 0 3 0v-7a1.5 1.5 0 0 0-3 0z"/>
+          <path d="M5 11a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11z"/>
+        </svg>
+      </div>
+      <h1>Lexora Privacy Policy</h1>
+      <p class="subtitle">Voice Dictation &amp; Transcription</p>
+      <span class="badge">Last updated: May 2026</span>
+    </header>
+
+    <div class="tl-dr">
+      <strong>The short version</strong>
+      <p>Lexora does not collect, transmit, or store any personal data on behalf of the developer. Your voice and transcripts never leave your device or your private iCloud account.</p>
+    </div>
+
+    <section>
+      <h2><span class="icon">📦</span> What Lexora collects</h2>
+      <p><strong>Nothing.</strong> Lexora does not collect, transmit, or store any personal data on behalf of the developer. There are no accounts, no sign-ups, and no servers we operate that receive your data.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">📱</span> Where your data lives</h2>
+      <p>All data created by Lexora — transcripts, vocabulary, voice profile, session history — is stored in exactly two places:</p>
+      <ul>
+        <li><strong>On your device</strong> in local app storage</li>
+        <li><strong>In your private iCloud account</strong> via CloudKit (encrypted end-to-end; only you can access it)</li>
+      </ul>
+      <p style="margin-top:0.75rem;">No data is sent to any server operated by Lexora or its developer.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">🎙️</span> Microphone &amp; speech recognition</h2>
+      <p>Lexora records your microphone and converts speech to text using <strong>Apple's on-device Speech Recognition framework</strong> (SFSpeechRecognizer).</p>
+      <ul>
+        <li>When on-device recognition is available for your language, audio is processed entirely on your iPhone — audio is never transmitted anywhere.</li>
+        <li>When on-device recognition is unavailable for a given language, Apple may process audio on Apple's own servers under <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Apple's Privacy Policy</a>. Lexora has no control over this and does not receive the audio.</li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">🤖</span> Optional AI features (Premium)</h2>
+      <p>Lexora Premium includes an optional AI feature that sends transcript <em>text</em> (not audio) to <strong>OpenAI's API</strong> to generate summaries, action items, and follow-up suggestions.</p>
+      <ul>
+        <li><strong>Opt-in only</strong> — activates only when you explicitly tap "Generate AI Insights"</li>
+        <li>Uses <strong>your own OpenAI API key</strong>, which you enter in Settings</li>
+        <li>Your API key is stored in the <strong>iOS Keychain</strong> on your device — never transmitted to the developer or any third party other than OpenAI</li>
+        <li>When text is sent to OpenAI, it is governed by <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">OpenAI's Privacy Policy</a></li>
+      </ul>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">⌨️</span> Keyboard extension</h2>
+      <p>The LexoraKeyboard extension requires "Allow Full Access" to share your learned vocabulary and voice profile with the main app. This sharing happens through an <strong>Apple App Group</strong> — a local, on-device channel. No data leaves your device through the keyboard extension.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">👤</span> Contacts (optional)</h2>
+      <p>If you grant Contacts access, Lexora reads contact names to improve recognition of proper nouns. Contact data is never stored, transmitted, or processed beyond the session in which it is used.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">📊</span> Analytics &amp; tracking</h2>
+      <p>Lexora contains <strong>no third-party analytics SDK</strong>, no advertising framework, and no tracking pixels. There is no usage telemetry of any kind sent to the developer.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">👶</span> Children</h2>
+      <p>Lexora is rated 4+ and does not knowingly collect information from children under 13.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">🔄</span> Changes to this policy</h2>
+      <p>If this policy changes materially, the update will be noted with a new "Last updated" date at the top of this page.</p>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2><span class="icon">✉️</span> Contact</h2>
+      <p>Questions about privacy? Open an issue on GitHub:<br />
+      <a href="https://github.com/yiga/lexora/issues" target="_blank" rel="noopener">github.com/yiga/lexora/issues</a></p>
+    </section>
+
+    <footer>
+      <p>Lexora &copy; 2026 &mdash; All rights reserved</p>
+    </footer>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — required App Store privacy manifest (Xcode 15+).
+  Must be added to the Lexora app target in Xcode.
+
+  Reference: https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- ── Tracking ───────────────────────────────────────────────────────── -->
+    <!-- Lexora does not track users across apps or websites. -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- ── Collected data types ───────────────────────────────────────────── -->
+    <!--
+      Lexora does NOT collect data on behalf of the developer.
+      All transcripts, vocabulary, and corrections stay on-device / in the
+      user's private iCloud account. The optional AI feature sends transcript
+      text to OpenAI *at the user's explicit request* using the user's own key —
+      this is user-initiated third-party sharing, not developer data collection.
+    -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <!-- ── Required reason APIs ───────────────────────────────────────────── -->
+    <!--
+      Reasons must be declared for every privacy-sensitive API used, even
+      when no data is collected. Codes are from Apple's approved reasons list.
+    -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+
+        <!-- UserDefaults — storing app preferences and session metadata -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- CA92.1: Accessing info from the same app that wrote it -->
+                <string>CA92.1</string>
+            </array>
+        </dict>
+
+        <!-- File timestamps — used when exporting transcripts, PDF, SRT, etc. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- C617.1: Providing the file timestamp to the user on request -->
+                <string>C617.1</string>
+            </array>
+        </dict>
+
+        <!-- Disk space — shown in Settings → Data → "Transcript storage" -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- E174.1: Displaying to the user or acting on their behalf -->
+                <string>E174.1</string>
+            </array>
+        </dict>
+
+        <!-- System boot time — used internally by AVFoundation audio session timing -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- 35F9.1: Calculating time on device without sending data off device -->
+                <string>35F9.1</string>
+            </array>
+        </dict>
+
+    </array>
+
+</dict>
+</plist>

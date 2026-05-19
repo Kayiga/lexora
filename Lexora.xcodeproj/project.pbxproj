@@ -1,0 +1,833 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08D29E05D3DA113740EF55CA /* LexoraApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9ECDDE45F74425D6456EB9 /* LexoraApp.swift */; };
+		0A7572C9164036D5F942B9C9 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30E1461A6B97DD8BBEC30051 /* ActivityKit.framework */; };
+		14A823D82E055837BC608AAB /* AppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB0C8B02AE23C2DFF3993A3 /* AppIntents.swift */; };
+		1A6E553092CC865290D663EB /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54791977AAEB2A30F0A4BC3E /* AppState.swift */; };
+		21040BF6146BEAB965AD6DEC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 882A4CBF4E8A0339D324189A /* WidgetKit.framework */; };
+		216A952B501C6B04CB41B56D /* UserVoiceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B959BF794CEEBA8383316B2 /* UserVoiceProfile.swift */; };
+		22C1B7E0E5DF36873E1736CB /* LexoraWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A51C765DCE6AB77664CF94C /* LexoraWidget.swift */; };
+		289CB73B581E7D442957C193 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 30E1461A6B97DD8BBEC30051 /* ActivityKit.framework */; };
+		2CE1ED90C158ED8D60C97C61 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D160731ABC089E11FC5035A7 /* DashboardView.swift */; };
+		47CD57D63776FE2997F4A233 /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C21FCD85E2C540EF1D7657BA /* RecordingView.swift */; };
+		5434A53C207C96060AE37709 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59DCCE52307596B520C6C410 /* FlowLayout.swift */; };
+		55AC4BB9B7F6B389EB350F88 /* TranscriptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE89C9743ACAAFF51472EE2 /* TranscriptionHistoryView.swift */; };
+		5CECA479327DD8953DBF318A /* Color+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7A242E1F32C6853CB1D5B0 /* Color+Extensions.swift */; };
+		699AC419ECB10F135D3E9D0A /* RecordingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF9E9E578FFBCB18ED34548 /* RecordingActivityAttributes.swift */; };
+		717AB6B5EE05B55E361D2E71 /* LexoraWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 415CF52156FED86CBB841BCD /* LexoraWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		735F21CB84B327AE3D69DAD2 /* UserVoiceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B959BF794CEEBA8383316B2 /* UserVoiceProfile.swift */; };
+		896F7798C7F006672D732628 /* VocabularyEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C138002AD12C2F0D4601E0 /* VocabularyEntry.swift */; };
+		A0B1C2D3E4F5A6B7C8D9E036 /* PDFExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F5A6B7C8D9E0F137 /* PDFExportService.swift */; };
+		A3DB7F7AFC421813008D9B8F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCD54986991F6D8ED61D8087 /* OnboardingView.swift */; };
+		A9B0C1D2E3F4A5B6C7D8E93C /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C1D2E3F4A5B6C7D8E9F03D /* HapticManager.swift */; };
+		AA11BB22CC33DD44EE55FF67 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AIService.swift */; };
+		AB8F63511388D2BDB4E5D7D6 /* LexoraKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AC123456789ABCDEF0123401 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC123456789ABCDEF0123400 /* Assets.xcassets */; };
+		AD968599D5718A06BFA9E3EA /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F99F91545EED51BA1C3975 /* SpotlightService.swift */; };
+		B00DCDF5A7C4701E0F5DCA0D /* LearningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E18A68ED42AE1B28839E565 /* LearningEngine.swift */; };
+		B0EF9C43C52CD589C80B6C63 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDD787BE482FEE14C23EB96E /* SettingsView.swift */; };
+		B3C7A1F2D4E58F6A90BC123D /* LiveActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F12C3E6B7D84510E9F2345 /* LiveActivityService.swift */; };
+		B3F0D8B3906AAE2A7DA8CF5E /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7DD4F752DE15F0E1FBF12A6 /* WaveformView.swift */; };
+		B8DD71CE80CBE6FEA4CA5AD6 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE9B0E21A75B23EE2A90AA4 /* KeyboardViewController.swift */; };
+		BB22CC33DD44EE55FF66AA12 /* StoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA11 /* StoreService.swift */; };
+		C4D8E9F0A1B2C3D4E5F60718 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F7A8B9C0D1E2F3A4B527 /* NotificationService.swift */; };
+		C5D6E7F8A9B0C1D2E3F4A538 /* LexoraTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E7F8A9B0C1D2E3F4A5B639 /* LexoraTips.swift */; };
+		CC33DD44EE55FF66AA11BB23 /* HTMLExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE55FF66AA11BB22 /* HTMLExportService.swift */; };
+		CEF0B3C5478C45B23EDF9AF0 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E66B02D803C0DAA0CF78B8E /* TranscriptionSession.swift */; };
+		D114AD52D3F0BB53417F0959 /* VocabularyEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C138002AD12C2F0D4601E0 /* VocabularyEntry.swift */; };
+		D4E106E93FCA7CCD59BC698F /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FAFDE2C8EA1FBEAB63CADD7 /* CloudSyncService.swift */; };
+		D9D0A30EABC11483F35E0D11 /* SpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F2496EBCE918F6A5102E4F0 /* SpeechEngine.swift */; };
+		DD44EE55FF66AA11BB22CC34 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44EE55FF66AA11BB22CC33 /* PremiumPaywallView.swift */; };
+		E1F2A3B4C5D6E7F8A9B0C134 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F8A9B0C1D235 /* AnalyticsView.swift */; };
+		E375B66EB53045C4C8E7D392 /* RecordingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF9E9E578FFBCB18ED34548 /* RecordingActivityAttributes.swift */; };
+		E7F8A9B0C1D2E3F4A5B6C73A /* SRTExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A9B0C1D2E3F4A5B6C7D83B /* SRTExportService.swift */; };
+		E9A13597545D9F3089030E5A /* VoiceProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6B82BED49C7483E6A7DAAB /* VoiceProfileView.swift */; };
+		EE55FF66AA11BB22CC33DD45 /* AppStoreScreenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66AA11BB22CC33DD44 /* AppStoreScreenshots.swift */; };
+		FF506DD3515700EBEA4FCE84 /* LanguageIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 902CB0CF1AB661AA6A3EB36C /* LanguageIntelligence.swift */; };
+		FF66AA11BB22CC33DD44EE56 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = FF66AA11BB22CC33DD44EE55 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2FDA433B983E87F7F528BDE5 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AB8F63511388D2BDB4E5D7D6 /* LexoraKeyboard.appex in Embed Foundation Extensions */,
+				717AB6B5EE05B55E361D2E71 /* LexoraWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0C6B82BED49C7483E6A7DAAB /* VoiceProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceProfileView.swift; path = Lexora/Views/Profile/VoiceProfileView.swift; sourceTree = "<group>"; };
+		0FAFDE2C8EA1FBEAB63CADD7 /* CloudSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudSyncService.swift; path = Lexora/Services/CloudSyncService.swift; sourceTree = "<group>"; };
+		145522880B9D29926F868CBB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = LexoraWidget/Info.plist; sourceTree = "<group>"; };
+		1A51C765DCE6AB77664CF94C /* LexoraWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LexoraWidget.swift; path = LexoraWidget/LexoraWidget.swift; sourceTree = "<group>"; };
+		2B959BF794CEEBA8383316B2 /* UserVoiceProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserVoiceProfile.swift; path = Lexora/Models/UserVoiceProfile.swift; sourceTree = "<group>"; };
+		2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LexoraKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		2E18A68ED42AE1B28839E565 /* LearningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LearningEngine.swift; path = Lexora/Services/LearningEngine.swift; sourceTree = "<group>"; };
+		30E1461A6B97DD8BBEC30051 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		316A817B66F44272074ABDB4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Lexora/Info.plist; sourceTree = "<group>"; };
+		3F2496EBCE918F6A5102E4F0 /* SpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechEngine.swift; path = Lexora/Services/SpeechEngine.swift; sourceTree = "<group>"; };
+		415CF52156FED86CBB841BCD /* LexoraWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LexoraWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		54791977AAEB2A30F0A4BC3E /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppState.swift; path = Lexora/Services/AppState.swift; sourceTree = "<group>"; };
+		59DCCE52307596B520C6C410 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlowLayout.swift; path = Lexora/Extensions/FlowLayout.swift; sourceTree = "<group>"; };
+		59F99F91545EED51BA1C3975 /* SpotlightService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpotlightService.swift; path = Lexora/Services/SpotlightService.swift; sourceTree = "<group>"; };
+		6D727D85F90BEFC9EAB35EE3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = LexoraKeyboard/Info.plist; sourceTree = "<group>"; };
+		6E66B02D803C0DAA0CF78B8E /* TranscriptionSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionSession.swift; path = Lexora/Models/TranscriptionSession.swift; sourceTree = "<group>"; };
+		6EE9B0E21A75B23EE2A90AA4 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeyboardViewController.swift; path = LexoraKeyboard/KeyboardViewController.swift; sourceTree = "<group>"; };
+		81918909E83595C8F4212CCC /* Lexora.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lexora.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		882A4CBF4E8A0339D324189A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		8A7A242E1F32C6853CB1D5B0 /* Color+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "Color+Extensions.swift"; path = "Lexora/Extensions/Color+Extensions.swift"; sourceTree = "<group>"; };
+		902CB0CF1AB661AA6A3EB36C /* LanguageIntelligence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LanguageIntelligence.swift; path = Lexora/Services/LanguageIntelligence.swift; sourceTree = "<group>"; };
+		A9F12C3E6B7D84510E9F2345 /* LiveActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveActivityService.swift; path = Lexora/Services/LiveActivityService.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* AIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIService.swift; path = Lexora/Services/AIService.swift; sourceTree = "<group>"; };
+		AB1122334455667788990011 /* Lexora.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Lexora.entitlements; path = Lexora/Lexora.entitlements; sourceTree = "<group>"; };
+		AC123456789ABCDEF0123400 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Lexora/Assets.xcassets; sourceTree = "<group>"; };
+		ADE89C9743ACAAFF51472EE2 /* TranscriptionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionHistoryView.swift; path = Lexora/Views/History/TranscriptionHistoryView.swift; sourceTree = "<group>"; };
+		B0C1D2E3F4A5B6C7D8E9F03D /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HapticManager.swift; path = Lexora/Extensions/HapticManager.swift; sourceTree = "<group>"; };
+		B1C2D3E4F5A6B7C8D9E0F137 /* PDFExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PDFExportService.swift; path = Lexora/Services/PDFExportService.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA11 /* StoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StoreService.swift; path = Lexora/Services/StoreService.swift; sourceTree = "<group>"; };
+		BC2233445566778899001122 /* LexoraWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = LexoraWidget.entitlements; path = LexoraWidget/LexoraWidget.entitlements; sourceTree = "<group>"; };
+		C21FCD85E2C540EF1D7657BA /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecordingView.swift; path = Lexora/Views/Recording/RecordingView.swift; sourceTree = "<group>"; };
+		C7DD4F752DE15F0E1FBF12A6 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaveformView.swift; path = Lexora/Views/Recording/WaveformView.swift; sourceTree = "<group>"; };
+		CC33DD44EE55FF66AA11BB22 /* HTMLExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HTMLExportService.swift; path = Lexora/Services/HTMLExportService.swift; sourceTree = "<group>"; };
+		CD3344556677889900112233 /* LexoraKeyboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = LexoraKeyboard.entitlements; path = LexoraKeyboard/LexoraKeyboard.entitlements; sourceTree = "<group>"; };
+		CDB0C8B02AE23C2DFF3993A3 /* AppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppIntents.swift; path = Lexora/Intents/AppIntents.swift; sourceTree = "<group>"; };
+		D160731ABC089E11FC5035A7 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DashboardView.swift; path = Lexora/Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
+		D5E6F7A8B9C0D1E2F3A4B527 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = Lexora/Services/NotificationService.swift; sourceTree = "<group>"; };
+		D6E7F8A9B0C1D2E3F4A5B639 /* LexoraTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LexoraTips.swift; path = Lexora/Services/LexoraTips.swift; sourceTree = "<group>"; };
+		DD44EE55FF66AA11BB22CC33 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PremiumPaywallView.swift; path = Lexora/Views/Premium/PremiumPaywallView.swift; sourceTree = "<group>"; };
+		DD9ECDDE45F74425D6456EB9 /* LexoraApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LexoraApp.swift; path = Lexora/LexoraApp.swift; sourceTree = "<group>"; };
+		DE11223344556677889900AA /* LexoraStore.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = LexoraStore.storekit; path = Lexora/LexoraStore.storekit; sourceTree = "<group>"; };
+		E2C138002AD12C2F0D4601E0 /* VocabularyEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VocabularyEntry.swift; path = Lexora/Models/VocabularyEntry.swift; sourceTree = "<group>"; };
+		EDD787BE482FEE14C23EB96E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Lexora/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
+		EE55FF66AA11BB22CC33DD44 /* AppStoreScreenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppStoreScreenshots.swift; path = Lexora/Views/Screenshots/AppStoreScreenshots.swift; sourceTree = "<group>"; };
+		F2A3B4C5D6E7F8A9B0C1D235 /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsView.swift; path = Lexora/Views/Dashboard/AnalyticsView.swift; sourceTree = "<group>"; };
+		F8A9B0C1D2E3F4A5B6C7D83B /* SRTExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SRTExportService.swift; path = Lexora/Services/SRTExportService.swift; sourceTree = "<group>"; };
+		FCD54986991F6D8ED61D8087 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingView.swift; path = Lexora/Views/Onboarding/OnboardingView.swift; sourceTree = "<group>"; };
+		FEF9E9E578FFBCB18ED34548 /* RecordingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecordingActivityAttributes.swift; path = Lexora/Models/RecordingActivityAttributes.swift; sourceTree = "<group>"; };
+		FF66AA11BB22CC33DD44EE55 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Lexora/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		49EB731974D1243FAAE82ECD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B8BAC8A033FD553566D16DA7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				289CB73B581E7D442957C193 /* ActivityKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C495D83EB601809C5B74D0A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21040BF6146BEAB965AD6DEC /* WidgetKit.framework in Frameworks */,
+				0A7572C9164036D5F942B9C9 /* ActivityKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		01EEABB42FBBB4DE0098886D /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				30E1461A6B97DD8BBEC30051 /* ActivityKit.framework */,
+				882A4CBF4E8A0339D324189A /* WidgetKit.framework */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		07B5D8B29BF70F60E8A88E82 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				EDD787BE482FEE14C23EB96E /* SettingsView.swift */,
+			);
+			name = Settings;
+			sourceTree = "<group>";
+		};
+		11223344556677889900AABB /* Premium */ = {
+			isa = PBXGroup;
+			children = (
+				DD44EE55FF66AA11BB22CC33 /* PremiumPaywallView.swift */,
+			);
+			name = Premium;
+			sourceTree = "<group>";
+		};
+		1BADDC1D73C1A20F347483E1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				81918909E83595C8F4212CCC /* Lexora.app */,
+				2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */,
+				415CF52156FED86CBB841BCD /* LexoraWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		26DB2F12AC14316753D03498 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				8A7A242E1F32C6853CB1D5B0 /* Color+Extensions.swift */,
+				59DCCE52307596B520C6C410 /* FlowLayout.swift */,
+				B0C1D2E3F4A5B6C7D8E9F03D /* HapticManager.swift */,
+				CDB0C8B02AE23C2DFF3993A3 /* AppIntents.swift */,
+			);
+			name = Extensions;
+			sourceTree = "<group>";
+		};
+		2F0903CCC9BF7AC8D14A5A6C /* Recording */ = {
+			isa = PBXGroup;
+			children = (
+				C21FCD85E2C540EF1D7657BA /* RecordingView.swift */,
+				C7DD4F752DE15F0E1FBF12A6 /* WaveformView.swift */,
+			);
+			name = Recording;
+			sourceTree = "<group>";
+		};
+		4A49DA36FF5527302FAA3E53 /* History */ = {
+			isa = PBXGroup;
+			children = (
+				ADE89C9743ACAAFF51472EE2 /* TranscriptionHistoryView.swift */,
+			);
+			name = History;
+			sourceTree = "<group>";
+		};
+		4ACA4AAADDFAE447185DBA82 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				D160731ABC089E11FC5035A7 /* DashboardView.swift */,
+				F2A3B4C5D6E7F8A9B0C1D235 /* AnalyticsView.swift */,
+			);
+			name = Dashboard;
+			sourceTree = "<group>";
+		};
+		810BB8F196A461270C24FA4C /* LexoraKeyboard */ = {
+			isa = PBXGroup;
+			children = (
+				6EE9B0E21A75B23EE2A90AA4 /* KeyboardViewController.swift */,
+				6D727D85F90BEFC9EAB35EE3 /* Info.plist */,
+				CD3344556677889900112233 /* LexoraKeyboard.entitlements */,
+			);
+			name = LexoraKeyboard;
+			sourceTree = "<group>";
+		};
+		8D3FC6DB5D0827F168A73277 /* Lexora */ = {
+			isa = PBXGroup;
+			children = (
+				9DA2D887053037133FF1B2FB /* Lexora */,
+				810BB8F196A461270C24FA4C /* LexoraKeyboard */,
+				D018D9AA01D78A0572AB75C8 /* LexoraWidget */,
+				1BADDC1D73C1A20F347483E1 /* Products */,
+				01EEABB42FBBB4DE0098886D /* Recovered References */,
+			);
+			name = Lexora;
+			sourceTree = "<group>";
+		};
+		9CECDDFA5EF2AE0232F90708 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4ACA4AAADDFAE447185DBA82 /* Dashboard */,
+				2F0903CCC9BF7AC8D14A5A6C /* Recording */,
+				FA859E13933605912D1F9FC3 /* Profile */,
+				4A49DA36FF5527302FAA3E53 /* History */,
+				07B5D8B29BF70F60E8A88E82 /* Settings */,
+				CCFE591E91225F03AE84726C /* Onboarding */,
+				11223344556677889900AABB /* Premium */,
+				AABB11223344556677889900 /* Screenshots */,
+			);
+			name = Views;
+			sourceTree = "<group>";
+		};
+		9DA2D887053037133FF1B2FB /* Lexora */ = {
+			isa = PBXGroup;
+			children = (
+				DD9ECDDE45F74425D6456EB9 /* LexoraApp.swift */,
+				E7651EE138212D3A5C27ABA0 /* Models */,
+				B295F7D1F3A53E369290BC6A /* Services */,
+				9CECDDFA5EF2AE0232F90708 /* Views */,
+				26DB2F12AC14316753D03498 /* Extensions */,
+				316A817B66F44272074ABDB4 /* Info.plist */,
+				AC123456789ABCDEF0123400 /* Assets.xcassets */,
+				FF66AA11BB22CC33DD44EE55 /* PrivacyInfo.xcprivacy */,
+				AB1122334455667788990011 /* Lexora.entitlements */,
+				DE11223344556677889900AA /* LexoraStore.storekit */,
+			);
+			name = Lexora;
+			sourceTree = "<group>";
+		};
+		AABB11223344556677889900 /* Screenshots */ = {
+			isa = PBXGroup;
+			children = (
+				EE55FF66AA11BB22CC33DD44 /* AppStoreScreenshots.swift */,
+			);
+			name = Screenshots;
+			sourceTree = "<group>";
+		};
+		B295F7D1F3A53E369290BC6A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				54791977AAEB2A30F0A4BC3E /* AppState.swift */,
+				3F2496EBCE918F6A5102E4F0 /* SpeechEngine.swift */,
+				902CB0CF1AB661AA6A3EB36C /* LanguageIntelligence.swift */,
+				2E18A68ED42AE1B28839E565 /* LearningEngine.swift */,
+				0FAFDE2C8EA1FBEAB63CADD7 /* CloudSyncService.swift */,
+				59F99F91545EED51BA1C3975 /* SpotlightService.swift */,
+				A9F12C3E6B7D84510E9F2345 /* LiveActivityService.swift */,
+				D5E6F7A8B9C0D1E2F3A4B527 /* NotificationService.swift */,
+				D6E7F8A9B0C1D2E3F4A5B639 /* LexoraTips.swift */,
+				B1C2D3E4F5A6B7C8D9E0F137 /* PDFExportService.swift */,
+				F8A9B0C1D2E3F4A5B6C7D83B /* SRTExportService.swift */,
+				AA11BB22CC33DD44EE55FF66 /* AIService.swift */,
+				BB22CC33DD44EE55FF66AA11 /* StoreService.swift */,
+				CC33DD44EE55FF66AA11BB22 /* HTMLExportService.swift */,
+			);
+			name = Services;
+			sourceTree = "<group>";
+		};
+		CCFE591E91225F03AE84726C /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				FCD54986991F6D8ED61D8087 /* OnboardingView.swift */,
+			);
+			name = Onboarding;
+			sourceTree = "<group>";
+		};
+		D018D9AA01D78A0572AB75C8 /* LexoraWidget */ = {
+			isa = PBXGroup;
+			children = (
+				1A51C765DCE6AB77664CF94C /* LexoraWidget.swift */,
+				145522880B9D29926F868CBB /* Info.plist */,
+				BC2233445566778899001122 /* LexoraWidget.entitlements */,
+			);
+			name = LexoraWidget;
+			sourceTree = "<group>";
+		};
+		E7651EE138212D3A5C27ABA0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2B959BF794CEEBA8383316B2 /* UserVoiceProfile.swift */,
+				6E66B02D803C0DAA0CF78B8E /* TranscriptionSession.swift */,
+				FEF9E9E578FFBCB18ED34548 /* RecordingActivityAttributes.swift */,
+				E2C138002AD12C2F0D4601E0 /* VocabularyEntry.swift */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
+		FA859E13933605912D1F9FC3 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				0C6B82BED49C7483E6A7DAAB /* VoiceProfileView.swift */,
+			);
+			name = Profile;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3D4C91345015A4DD0A099400 /* Lexora */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A7698C201D2A724C7CAD56C8 /* Build configuration list for PBXNativeTarget "Lexora" */;
+			buildPhases = (
+				725C161E7C7A70C18FEB191B /* Sources */,
+				B8BAC8A033FD553566D16DA7 /* Frameworks */,
+				F98C10A2CD7B651991BDE9F8 /* Resources */,
+				2FDA433B983E87F7F528BDE5 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Lexora;
+			productName = Lexora;
+			productReference = 81918909E83595C8F4212CCC /* Lexora.app */;
+			productType = "com.apple.product-type.application";
+		};
+		450E7CC0D5B506048A71AA88 /* LexoraKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A38923871C0668F21D8ADE79 /* Build configuration list for PBXNativeTarget "LexoraKeyboard" */;
+			buildPhases = (
+				149EA78272EA2881EC11FAAF /* Sources */,
+				49EB731974D1243FAAE82ECD /* Frameworks */,
+				671FFC92BF87819648E03424 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LexoraKeyboard;
+			productName = LexoraKeyboard;
+			productReference = 2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		B4DB309F5A68F32E9BF1D326 /* LexoraWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 43223E7AE0485F9EE99B8330 /* Build configuration list for PBXNativeTarget "LexoraWidget" */;
+			buildPhases = (
+				361D5D55272BAC073D1E2A1F /* Sources */,
+				C495D83EB601809C5B74D0A5 /* Frameworks */,
+				189B44D39B1F0E68421DF21E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LexoraWidget;
+			productName = LexoraWidget;
+			productReference = 415CF52156FED86CBB841BCD /* LexoraWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46F86FAA6BBF9AC94A7E4595 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					3D4C91345015A4DD0A099400 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					450E7CC0D5B506048A71AA88 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					B4DB309F5A68F32E9BF1D326 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+				};
+			};
+			buildConfigurationList = 56283EBD6DD86A56CED63937 /* Build configuration list for PBXProject "Lexora" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 8D3FC6DB5D0827F168A73277 /* Lexora */;
+			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3D4C91345015A4DD0A099400 /* Lexora */,
+				450E7CC0D5B506048A71AA88 /* LexoraKeyboard */,
+				B4DB309F5A68F32E9BF1D326 /* LexoraWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		189B44D39B1F0E68421DF21E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		671FFC92BF87819648E03424 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F98C10A2CD7B651991BDE9F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC123456789ABCDEF0123401 /* Assets.xcassets in Resources */,
+				FF66AA11BB22CC33DD44EE56 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		149EA78272EA2881EC11FAAF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8DD71CE80CBE6FEA4CA5AD6 /* KeyboardViewController.swift in Sources */,
+				735F21CB84B327AE3D69DAD2 /* UserVoiceProfile.swift in Sources */,
+				D114AD52D3F0BB53417F0959 /* VocabularyEntry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		361D5D55272BAC073D1E2A1F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22C1B7E0E5DF36873E1736CB /* LexoraWidget.swift in Sources */,
+				E375B66EB53045C4C8E7D392 /* RecordingActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		725C161E7C7A70C18FEB191B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				08D29E05D3DA113740EF55CA /* LexoraApp.swift in Sources */,
+				216A952B501C6B04CB41B56D /* UserVoiceProfile.swift in Sources */,
+				CEF0B3C5478C45B23EDF9AF0 /* TranscriptionSession.swift in Sources */,
+				699AC419ECB10F135D3E9D0A /* RecordingActivityAttributes.swift in Sources */,
+				896F7798C7F006672D732628 /* VocabularyEntry.swift in Sources */,
+				1A6E553092CC865290D663EB /* AppState.swift in Sources */,
+				D9D0A30EABC11483F35E0D11 /* SpeechEngine.swift in Sources */,
+				14A823D82E055837BC608AAB /* AppIntents.swift in Sources */,
+				FF506DD3515700EBEA4FCE84 /* LanguageIntelligence.swift in Sources */,
+				B00DCDF5A7C4701E0F5DCA0D /* LearningEngine.swift in Sources */,
+				D4E106E93FCA7CCD59BC698F /* CloudSyncService.swift in Sources */,
+				AD968599D5718A06BFA9E3EA /* SpotlightService.swift in Sources */,
+				B3C7A1F2D4E58F6A90BC123D /* LiveActivityService.swift in Sources */,
+				C4D8E9F0A1B2C3D4E5F60718 /* NotificationService.swift in Sources */,
+				C5D6E7F8A9B0C1D2E3F4A538 /* LexoraTips.swift in Sources */,
+				A0B1C2D3E4F5A6B7C8D9E036 /* PDFExportService.swift in Sources */,
+				E7F8A9B0C1D2E3F4A5B6C73A /* SRTExportService.swift in Sources */,
+				A9B0C1D2E3F4A5B6C7D8E93C /* HapticManager.swift in Sources */,
+				2CE1ED90C158ED8D60C97C61 /* DashboardView.swift in Sources */,
+				E1F2A3B4C5D6E7F8A9B0C134 /* AnalyticsView.swift in Sources */,
+				47CD57D63776FE2997F4A233 /* RecordingView.swift in Sources */,
+				B3F0D8B3906AAE2A7DA8CF5E /* WaveformView.swift in Sources */,
+				E9A13597545D9F3089030E5A /* VoiceProfileView.swift in Sources */,
+				55AC4BB9B7F6B389EB350F88 /* TranscriptionHistoryView.swift in Sources */,
+				B0EF9C43C52CD589C80B6C63 /* SettingsView.swift in Sources */,
+				A3DB7F7AFC421813008D9B8F /* OnboardingView.swift in Sources */,
+				5CECA479327DD8953DBF318A /* Color+Extensions.swift in Sources */,
+				5434A53C207C96060AE37709 /* FlowLayout.swift in Sources */,
+				AA11BB22CC33DD44EE55FF67 /* AIService.swift in Sources */,
+				BB22CC33DD44EE55FF66AA12 /* StoreService.swift in Sources */,
+				CC33DD44EE55FF66AA11BB23 /* HTMLExportService.swift in Sources */,
+				DD44EE55FF66AA11BB22CC34 /* PremiumPaywallView.swift in Sources */,
+				EE55FF66AA11BB22CC33DD45 /* AppStoreScreenshots.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		03AE716EE845E53B9F6D897F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LexoraKeyboard/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		127D04BDD1BB9D557816C436 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LexoraWidget/LexoraWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LexoraWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		191734982F22ABEBB64A1AE0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lexora/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		72FB3ED29B4639D83EC5DB14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lexora/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B2003D2807F7F42E8C3124AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LexoraKeyboard/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D3675B4896991D112B7C97E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LexoraWidget/LexoraWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LexoraWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		FA9139DD8B03E3F922556BF8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		FFE2104CCFAB79205AC64460 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7AZTZL9VAG;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		43223E7AE0485F9EE99B8330 /* Build configuration list for PBXNativeTarget "LexoraWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				127D04BDD1BB9D557816C436 /* Debug */,
+				D3675B4896991D112B7C97E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		56283EBD6DD86A56CED63937 /* Build configuration list for PBXProject "Lexora" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA9139DD8B03E3F922556BF8 /* Debug */,
+				FFE2104CCFAB79205AC64460 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A38923871C0668F21D8ADE79 /* Build configuration list for PBXNativeTarget "LexoraKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2003D2807F7F42E8C3124AD /* Debug */,
+				03AE716EE845E53B9F6D897F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A7698C201D2A724C7CAD56C8 /* Build configuration list for PBXNativeTarget "Lexora" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				72FB3ED29B4639D83EC5DB14 /* Debug */,
+				191734982F22ABEBB64A1AE0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46F86FAA6BBF9AC94A7E4595 /* Project object */;
+}
