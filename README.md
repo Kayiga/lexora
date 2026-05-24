@@ -1,5 +1,8 @@
 # Lexora — Voice Dictation & Transcription
 
+[![CI](https://github.com/Kayiga/lexora/actions/workflows/testflight.yml/badge.svg)](https://github.com/Kayiga/lexora/actions/workflows/testflight.yml)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-Policy-blue)](https://kayiga.github.io/lexora/privacy.html)
+
 An iOS app that learns how *you* speak.
 
 Dictate in any language, edit transcripts, sync to iCloud, and get smarter with every correction — all on-device, no audio servers.
@@ -160,7 +163,9 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ## Privacy
 
-Lexora processes speech **entirely on-device**. No audio is ever transmitted. Transcripts live in the user's private iCloud account. The optional AI feature sends transcript *text* to OpenAI at the user's explicit request, using their own API key stored in the iOS Keychain. See `AppStore/privacy_policy.md`.
+Lexora processes speech **entirely on-device**. No audio is ever transmitted. Transcripts live in the user's private iCloud account. The optional AI feature sends transcript *text* to OpenAI at the user's explicit request, using their own API key stored in the iOS Keychain.
+
+Full privacy policy: **https://kayiga.github.io/lexora/privacy.html**
 
 ---
 
