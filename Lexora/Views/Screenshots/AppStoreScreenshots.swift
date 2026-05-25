@@ -67,7 +67,7 @@ private struct ScreenshotFrame<Content: View>: View {
                 .padding(.bottom, 32)
             }
         }
-        .frame(width: 393, height: 852)   // 6.7" logical size (6.9" physical)
+        .frame(width: 430, height: 932)    // 6.7" required App Store size → 1290×2796 @3x
     }
 }
 
