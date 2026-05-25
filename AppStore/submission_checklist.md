@@ -27,7 +27,8 @@
 - [x] `AppStore/privacy_policy.md` — privacy policy source
 - [x] `docs/privacy.html` — dark-mode HTML, **live at https://kayiga.github.io/lexora/privacy.html** ✅
 - [x] `docs/index.html` — root redirect → privacy page
-- [x] 5 App Store screenshots — `AppStore/Screenshots/` (1.0–1.9 MB each, 6.9" iPhone format)
+- [x] 5 App Store screenshots — `AppStore/Screenshots/` (1.4–1.9 MB each, **1290×2796 6.7" iPhone** — correct App Store format)
+- [x] iPhone-only app (`TARGETED_DEVICE_FAMILY = 1`) — no iPad screenshots required
 
 ### GitHub
 - [x] Repo live: **https://github.com/Kayiga/lexora** (public)

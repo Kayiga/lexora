@@ -145,15 +145,14 @@ https://kayiga.github.io/lexora/privacy.html
 
 ## App Store Screenshots Required
 
-| Device | Sizes needed |
-|---|---|
-| iPhone 6.9" (Pro Max) | 1320 × 2868 or 1290 × 2796 |
-| iPhone 6.7" | 1290 × 2796 |
-| iPad Pro 13" (M4) | 2064 × 2752 |
+Lexora is **iPhone-only** (TARGETED_DEVICE_FAMILY = 1). No iPad screenshots required.
 
-**5 screenshot frames are pre-built in Xcode:**
-Open `Lexora/Views/Screenshots/AppStoreScreenshots.swift` in Xcode.
-In the Preview canvas, click the camera icon on each `#Preview` to export.
+| Device | Format | Status |
+|---|---|---|
+| iPhone 6.7" | 1290 × 2796 | ✅ All 5 generated — `AppStore/Screenshots/` |
+
+**Screenshots are pre-generated** at the correct App Store size (1290×2796).
+Upload from `AppStore/Screenshots/` directly in App Store Connect.
 
 Screenshots depict (in order):
 1. Dashboard — streak, word count, smart suggestions
