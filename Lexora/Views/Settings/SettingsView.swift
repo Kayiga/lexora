@@ -1216,10 +1216,10 @@ struct SettingsView: View {
     /// Estimated bytes of transcript text stored locally across all sessions.
     private var estimatedStorageLabel: String {
         let bytes = appState.sessions.reduce(0) { total, s in
-            total
-                + (s.finalTranscript.data(using: .utf8)?.count ?? 0)
-                + (s.rawTranscript.data(using: .utf8)?.count ?? 0)
-                + (s.notes?.data(using: .utf8)?.count ?? 0)
+            let a = s.finalTranscript.data(using: .utf8)?.count ?? 0
+            let b = s.rawTranscript.data(using: .utf8)?.count ?? 0
+            let c = s.notes?.data(using: .utf8)?.count ?? 0
+            return total + a + b + c
         }
         if bytes == 0 { return "0 KB" }
         let mb = Double(bytes) / 1_048_576.0
