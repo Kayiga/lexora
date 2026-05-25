@@ -42,6 +42,16 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0F99D1E5A934FCE89EDC35E7"
+               BuildableName = "LexoraTests.xctest"
+               BlueprintName = "LexoraTests"
+               ReferencedContainer = "container:Lexora.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
