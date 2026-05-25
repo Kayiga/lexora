@@ -64,10 +64,10 @@ enum SRTExportService {
         var buffer: [TranscriptSegment] = []
 
         func flush() {
-            guard !buffer.isEmpty else { return }
-            let text = buffer.map { $0.text }.joined(separator: " ")
-            let start = buffer.first!.startTime
-            let end   = buffer.last!.endTime
+            guard !buffer.isEmpty, let first = buffer.first, let last = buffer.last else { return }
+            let text  = buffer.map { $0.text }.joined(separator: " ")
+            let start = first.startTime
+            let end   = last.endTime
             result.append((start: start, end: max(end, start + 0.5), text: text))
             buffer = []
         }

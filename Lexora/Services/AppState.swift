@@ -450,13 +450,14 @@ final class AppState {
         let avgAccuracy   = accuracyValid.isEmpty ? 0.0
             : accuracyValid.reduce(0) { $0 + $1.estimatedAccuracy } / Double(accuracyValid.count)
 
+        guard let firstSession = sorted.first else { return }
         var merged = TranscriptionSession()
-        merged.startedAt        = sorted.first!.startedAt
+        merged.startedAt        = firstSession.startedAt
         // Set endedAt so durationSeconds equals the sum of all source durations.
         merged.endedAt          = merged.startedAt.addingTimeInterval(totalDuration)
         merged.finalTranscript  = combinedTranscript
         merged.rawTranscript    = combinedTranscript
-        merged.primaryLanguage  = sorted.first!.primaryLanguage
+        merged.primaryLanguage  = firstSession.primaryLanguage
         merged.wordCount        = totalWords
         merged.estimatedAccuracy = avgAccuracy
         merged.paceWPM          = totalDuration > 0 ? Double(totalWords) / (totalDuration / 60) : 0
@@ -628,8 +629,9 @@ final class AppState {
         let sessionMilestones: Set<Int> = [5, 25, 100, 250]
         let wordMilestones: Set<Int>    = [1_000, 5_000, 10_000, 50_000]
 
+        let lastSessionWords = sessions.last?.wordCount ?? 0
         guard sessionMilestones.contains(count)
-              || wordMilestones.contains(where: { totalWords >= $0 && totalWords - sessions.first!.wordCount < $0 })
+              || wordMilestones.contains(where: { totalWords >= $0 && totalWords - lastSessionWords < $0 })
         else { return }
 
         // Find the key window and request the review via the current scene.
