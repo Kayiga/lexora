@@ -87,6 +87,18 @@ struct TranscriptionSession: Identifiable, Codable {
         }
     }
 
+    /// Returns true when this session contains `query` (case-insensitive) in its
+    /// transcript, title, notes, or tags. Used by the history search bar.
+    func matches(query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let q = query.lowercased()
+        if finalTranscript.lowercased().contains(q) { return true }
+        if rawTranscript.lowercased().contains(q)   { return true }
+        if let title = customTitle, title.lowercased().contains(q) { return true }
+        if let notes = notes, notes.lowercased().contains(q)       { return true }
+        return tags.contains { $0.lowercased().contains(q) }
+    }
+
     // Friendly name lookup for common iOS apps
     private static func friendlyName(for bundleID: String) -> String? {
         let known: [String: String] = [

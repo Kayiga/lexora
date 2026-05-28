@@ -34,6 +34,20 @@
                ReferencedContainer = "container:Lexora.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0F99D1E5A934FCE89EDC35E7"
+               BuildableName = "LexoraTests.xctest"
+               BlueprintName = "LexoraTests"
+               ReferencedContainer = "container:Lexora.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
