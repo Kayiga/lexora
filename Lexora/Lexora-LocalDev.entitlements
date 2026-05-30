@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Lexora-LocalDev.entitlements
+  Used by the DEBUG build configuration ONLY.
+
+  Removes the App Group entitlement so Xcode automatic signing works
+  with a free / pending Apple Developer account (no registered App Group needed).
+
+  Storage falls back to ~/Library/Application Support/Lexora/ automatically —
+  all core features (recording, transcription, history, AI, IAP) work fully.
+  Widget and keyboard data-sharing resume once you switch to a paid account.
+
+  Switch back: in Xcode → Lexora target → Build Settings → Debug →
+  CODE_SIGN_ENTITLEMENTS → change back to Lexora/Lexora.entitlements
+-->
+<plist version="1.0">
+<dict/>
+</plist>

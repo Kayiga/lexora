@@ -649,7 +649,7 @@
 		127D04BDD1BB9D557816C436 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = LexoraWidget/LexoraWidget.entitlements;
+				CODE_SIGN_ENTITLEMENTS = LexoraWidget/LexoraWidget-LocalDev.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -720,7 +720,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora-LocalDev.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -746,7 +746,7 @@
 		B2003D2807F7F42E8C3124AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard.entitlements;
+				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard-LocalDev.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;

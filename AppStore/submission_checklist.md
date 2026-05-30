@@ -6,7 +6,8 @@
 - [x] 36 Swift source files across 3 targets (Lexora, LexoraWidget, LexoraKeyboard)
 - [x] `Lexora.xcodeproj` — all files wired, 3 targets configured, Swift 5 language mode
 - [x] `PrivacyInfo.xcprivacy` — Apple required privacy manifest with correct reason codes
-- [x] All 3 entitlements files — App Group `group.com.yiga.Lexora` in all targets
+- [x] All 3 entitlements files — App Group `group.com.yiga.Lexora` in all targets (Release builds)
+- [x] `*-LocalDev.entitlements` for all 3 targets — Debug builds run on device today with any free Apple ID
 - [x] `LexoraStore.storekit` — Simulator IAP testing config (product: `com.yiga.Lexora.premium`)
 - [x] StoreKit config wired into Xcode scheme (auto-activated in Simulator)
 - [x] All 4 Info.plist files validated (`plutil -lint` passes)

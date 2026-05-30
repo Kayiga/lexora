@@ -116,26 +116,36 @@ LexoraKeyboard/
 ### Prerequisites
 
 - Xcode 16+ (macOS 15 Sequoia)
-- iPhone / iPad running iOS 18+
-- Free Apple Developer account (device testing) or paid account (TestFlight/App Store)
+- iPhone running iOS 18+
+- Any Apple ID (free account works for local device testing)
 
-### Open
+### Run on device today — no paid account needed
+
+The Debug build uses minimal entitlements (`Lexora-LocalDev.entitlements`) that Xcode can sign automatically with any free Apple ID. All core features work immediately.
 
 ```bash
 open Lexora.xcodeproj
 ```
 
-Xcode resolves SPM dependencies automatically. No CocoaPods.
+1. **Connect your iPhone** via USB
+2. **Xcode → Preferences → Accounts** — sign in with your Apple ID if not already
+3. In the scheme selector, pick your iPhone as the destination
+4. In **Signing & Capabilities**, confirm Team shows your personal team (not 7AZTZL9VAG)
+5. Press **⌘R**
+6. On first launch, tap **Trust** on the device (Settings → General → VPN & Device Management → your Apple ID → Trust)
 
-### Required one-time setup
+Grant microphone and speech recognition permissions when prompted. Complete the 6-step onboarding. Everything works — recording, transcription, history, AI Insights, IAP (free in `#if DEBUG`).
 
-1. **Team ID** — already set to `7AZTZL9VAG`. Change in Signing & Capabilities if needed.
-2. **iCloud / CloudKit** — Signing & Capabilities → iCloud → enable CloudKit → container `iCloud.com.yiga.Lexora`
-3. **App Group** — `group.com.yiga.Lexora` — register on developer.apple.com, add to all 3 App IDs
+> **What's limited without a paid account:** Widget and keyboard extension won't share data with the main app (they need the registered App Group). The main app is fully functional.
 
-### Build & run
+### After your paid account is approved (~48h)
 
-Press **⌘R**. Complete the 6-step onboarding. Grant microphone and speech recognition permissions.
+1. Register App Group `group.com.yiga.Lexora` on developer.apple.com → Identifiers
+2. In Xcode → Lexora target → Build Settings → **CODE_SIGN_ENTITLEMENTS** → change Debug value from `Lexora/Lexora-LocalDev.entitlements` back to `Lexora/Lexora.entitlements` (same for Widget and Keyboard targets)
+3. Add iCloud/CloudKit: Signing & Capabilities → `+` → iCloud → container `iCloud.com.yiga.Lexora`
+4. Run `.github/setup_ci_secrets.sh` then `git tag v1.0.1 && git push origin v1.0.1` to trigger TestFlight
+
+### Test IAP in Simulator
 
 ### Test IAP in Simulator
 
