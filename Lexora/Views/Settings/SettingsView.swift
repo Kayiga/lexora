@@ -60,7 +60,10 @@ struct SettingsView: View {
                     .environment(appState)
             }
             .navigationTitle("Settings")
-            .task { @MainActor in
+            .task {
+                // No @MainActor annotation — SwiftUI .task on a @MainActor view already
+                // runs on the main actor. Explicit @MainActor in .task {} triggers the
+                // same MainActor.assumeIsolated executor bug on macOS 26 beta.
                 await DailyGoalTip.weeklyUse.donate()
                 let sync = appState.cloudSync
                 let status = await sync.checkAccountStatus()
