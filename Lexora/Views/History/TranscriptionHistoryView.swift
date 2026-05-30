@@ -373,7 +373,7 @@ struct HistoryListContent: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSelectMode && !selectedIDs.isEmpty {
                 bulkActionBar
-            } else if !appState.store.isPremium && filteredSessions.count > 10 {
+            } else if !appState.store.isUnlocked && filteredSessions.count > 10 {
                 // Upgrade prompt when free users have hidden sessions
                 let hiddenCount = filteredSessions.count - 10
                 let sessionNoun = hiddenCount == 1 ? "session" : "sessions"
@@ -400,6 +400,7 @@ struct HistoryListContent: View {
         }
         .sheet(isPresented: $showPaywall) {
             PremiumPaywallView()
+                .environment(appState)
         }
         .task {
             await SortHistoryTip.sessionCount.donate()
@@ -467,6 +468,7 @@ struct HistoryListContent: View {
                 sessions: browserSessions.isEmpty ? [session] : browserSessions,
                 initialID: session.id
             )
+                .environment(appState)
         }
         .confirmationDialog("Delete this session?", isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
@@ -498,6 +500,7 @@ struct HistoryListContent: View {
         }
         .sheet(isPresented: $showExportSheet) {
             ShareSheet(items: exportItems)
+                .environment(appState)
         }
         .alert("Rename tag", isPresented: $showTagRenameAlert) {
             TextField("New tag name", text: $tagRenameInput)
@@ -645,10 +648,12 @@ struct HistoryListContent: View {
             let pair = appState.sessions.filter { selectedIDs.contains($0.id) }
             if pair.count == 2 {
                 SessionComparisonView(sessionA: pair[0], sessionB: pair[1])
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showBulkShareSheet) {
             ShareSheet(items: bulkShareItems)
+                .environment(appState)
         }
         .sheet(isPresented: $showBulkTagSheet) {
             NavigationStack {
@@ -698,6 +703,7 @@ struct HistoryListContent: View {
                 }
             }
             .presentationDetents([.medium, .large])
+                .environment(appState)
         }
     }
 
@@ -1073,7 +1079,7 @@ struct HistoryListContent: View {
 
     /// Free users see their 10 most recent sessions; premium users see all.
     private var visibleSessions: [TranscriptionSession] {
-        guard !appState.store.isPremium else { return filteredSessions }
+        guard !appState.store.isUnlocked else { return filteredSessions }
         return Array(filteredSessions.prefix(10))
     }
 
@@ -1595,7 +1601,7 @@ struct SessionDetailView: View {
                     }
 
                     // AI panel — premium + API key required
-                    if appState.store.isPremium {
+                    if appState.store.isUnlocked {
                         if appState.ai.hasAPIKey {
                             aiPanel
                         }
@@ -1702,7 +1708,7 @@ struct SessionDetailView: View {
 
                             // Reading mode button (premium)
                             Button {
-                                if appState.store.isPremium {
+                                if appState.store.isUnlocked {
                                     showReadingMode = true
                                 } else {
                                     showPaywall = true
@@ -1712,7 +1718,7 @@ struct SessionDetailView: View {
                                     Image(systemName: "text.magnifyingglass")
                                         .foregroundStyle(Color.accentColor)
                                         .font(.subheadline)
-                                    if !appState.store.isPremium {
+                                    if !appState.store.isUnlocked {
                                         Image(systemName: "crown.fill")
                                             .font(.system(size: 7))
                                             .foregroundStyle(Color(red: 0.56, green: 0.18, blue: 0.82))
@@ -1721,7 +1727,7 @@ struct SessionDetailView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .help(appState.store.isPremium ? "Open in reading mode" : "Reading mode requires Premium")
+                            .help(appState.store.isUnlocked ? "Open in reading mode" : "Reading mode requires Premium")
                             .disabled(editedText.isEmpty)
                         }
 
@@ -1792,6 +1798,7 @@ struct SessionDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selectedSimilarSession) { s in
                 NavigationStack { SessionDetailView(session: s) }
+                    .environment(appState)
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1955,23 +1962,29 @@ struct SessionDetailView: View {
             }
             .sheet(isPresented: $showingRecorder) {
                 RecordingView()
+                    .environment(appState)
             }
             .sheet(isPresented: $showReadingMode) {
                 TranscriptReadingView(text: editedText, session: session, sentimentScore: sentimentScore)
+                    .environment(appState)
             }
             .sheet(isPresented: $showPaywall) {
                 PremiumPaywallView()
+                    .environment(appState)
             }
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheet(items: shareItems)
+                    .environment(appState)
             }
             .sheet(isPresented: $showFilesExporter) {
                 if let url = filesToExport {
                     FilesExporter(url: url) { showFilesExporter = false }
+                        .environment(appState)
                 }
             }
             .sheet(isPresented: $showDiffSheet) {
                 TranscriptDiffView(original: session.rawTranscript, edited: editedText)
+                    .environment(appState)
             }
             .task {
                 // Compute keyword suggestions, auto-summary, and named entities concurrently.
@@ -3586,6 +3599,7 @@ struct SessionDetailView: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(.systemGray4).opacity(0.4), lineWidth: 1))
         .sheet(isPresented: $showChapterEditor) {
             chapterEditorSheet
+                .environment(appState)
         }
     }
 
@@ -4693,6 +4707,7 @@ struct TagManagementView: View {
         }
         .sheet(isPresented: $showMergeSheet) {
             mergePicker
+                .environment(appState)
         }
     }
 

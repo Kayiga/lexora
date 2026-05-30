@@ -214,12 +214,14 @@ struct RecordingView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [editedTranscript])
+                .environment(appState)
         }
         .sheet(isPresented: $showSessionStats) {
             if let session = engine.lastFinishedSession {
                 SessionStatsSheet(session: session)
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
+                    .environment(appState)
             }
         }
         .sheet(isPresented: $showCorrectionsSheet) {
@@ -227,6 +229,7 @@ struct RecordingView: View {
                 original: lastFinalTranscript,
                 corrected: editedTranscript
             )
+                .environment(appState)
         }
         .alert("Permissions needed", isPresented: $showPermissionAlert) {
             Button("Open Settings") {

@@ -125,18 +125,22 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showingRecorder, onDismiss: { quickRecordLanguage = nil }) {
             RecordingView(initialLanguage: quickRecordLanguage)
+                .environment(appState)
         }
         .sheet(isPresented: $showingAnalytics) {
             AnalyticsView()
+                .environment(appState)
         }
         .sheet(isPresented: $showingQuickNote) {
             QuickNoteView()
+                .environment(appState)
         }
         .sheet(item: $selectedSession) { session in
             SessionSwipeBrowserView(
                 sessions: appState.sessions,
                 initialID: session.id
             )
+                .environment(appState)
         }
         .overlay(alignment: .top) {
             if showGoalCelebration {

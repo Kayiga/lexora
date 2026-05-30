@@ -396,6 +396,7 @@ struct AnalyticsView: View {
                 }
                 .sheet(isPresented: $showExportSheet) {
                     ShareSheet(items: exportItems)
+                        .environment(appState)
                 }
             }
         }
@@ -1078,6 +1079,7 @@ struct AnalyticsView: View {
                                             set: { if !$0 { showDayPopover = false } }
                                         )) {
                                             dayPopoverContent(for: day.date, count: day.count)
+                                                .environment(appState)
                                         }
                                 }
                             }

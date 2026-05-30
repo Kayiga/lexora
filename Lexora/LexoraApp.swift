@@ -334,6 +334,7 @@ struct MainTabView: View {
             RecordingView(initialLanguage: deepLinkedLanguage)
                 .presentationDetents(horizontalSizeClass == .regular ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
+                .environment(appState)
         }
         .sheet(isPresented: Binding(
             get: { deepLinkedSessionID != nil },
@@ -342,6 +343,7 @@ struct MainTabView: View {
             if let id = deepLinkedSessionID,
                let session = appState.sessions.first(where: { $0.id == id }) {
                 NavigationStack { SessionDetailView(session: session) }
+                    .environment(appState)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .lexoraStartRecording)) { note in

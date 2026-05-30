@@ -7,6 +7,12 @@ import NaturalLanguage
 @Observable @MainActor
 final class AppState {
 
+    /// Safe static fallback used by the custom environment key on Mac Catalyst.
+    /// Mac Catalyst's PresentationHostingController breaks the @Observable environment
+    /// chain for sheets/popovers. The custom \.appState EnvironmentKey reads this when
+    /// the injected value is absent, avoiding the assertionFailure crash.
+    nonisolated(unsafe) private(set) static var _shared: AppState?
+
     // Single source of truth for each service — initialised once in init()
     let storage: ProfileStorage
     let languageIntelligence: LanguageIntelligence
@@ -60,8 +66,9 @@ final class AppState {
         self.cloudSync = cs
         self.spotlight = SpotlightService()
 
-        // Make this instance accessible to App Intents (which may run out-of-process).
+        // Make this instance accessible to App Intents and Mac Catalyst sheet fallback.
         AppStateHolder.shared = self
+        AppState._shared = self
 
         // Note: SpeechEngine.finaliseSession() already calls learningEngine.ingest() internally.
         // This closure handles UI state and cloud upload only.

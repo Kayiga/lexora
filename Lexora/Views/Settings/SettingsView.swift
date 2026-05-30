@@ -57,6 +57,7 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PremiumPaywallView()
+                    .environment(appState)
             }
             .navigationTitle("Settings")
             .task { @MainActor in
@@ -192,6 +193,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showRedeemSheet) {
             redeemSheet
+                .environment(appState)
         }
     }
 
@@ -991,10 +993,12 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showExportSheet) {
             ShareSheet(items: exportItems)
+                .environment(appState)
         }
         .sheet(isPresented: $showFilesExporter) {
             if let url = fileToExport {
                 FilesExporter(url: url) { showFilesExporter = false }
+                    .environment(appState)
             }
         }
         .fileImporter(
@@ -1690,6 +1694,7 @@ struct CustomTemplatesView: View {
         }
         .sheet(isPresented: $showingEditor) {
             CustomTemplateEditView(existingTemplate: templateToEdit)
+                .environment(appState)
         }
     }
 }

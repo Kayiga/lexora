@@ -188,6 +188,7 @@ struct VoiceProfileView: View {
         }
         .sheet(isPresented: $showAddVocabulary) {
             AddVocabularyView()
+                .environment(appState)
         }
         .sheet(isPresented: $showDictionarySheet) {
             NavigationStack {
@@ -202,6 +203,7 @@ struct VoiceProfileView: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+                .environment(appState)
         }
         .alert("Contacts import", isPresented: $showImportContacts) {
             Button("OK") { contactImportStatus = "" }
@@ -210,6 +212,7 @@ struct VoiceProfileView: View {
         }
         .sheet(isPresented: $showVocabExportSheet) {
             ShareSheet(items: vocabExportItems)
+                .environment(appState)
         }
         .sheet(isPresented: $showBulkPasteImport) {
             BulkPasteImportView(pasteText: $bulkPasteText)
@@ -481,6 +484,7 @@ struct VoiceProfileView: View {
         }
         .sheet(isPresented: $showSmartLearnSheet) {
             SmartLearnSheet(suggestions: smartLearnSuggestions)
+                .environment(appState)
         }
         .sheet(isPresented: $showStudyMode) {
             VocabularyStudyView(vocabulary: filteredVocabulary.filter { $0.phonetic != nil || !$0.aliases.isEmpty })
@@ -985,6 +989,7 @@ struct VoiceProfileView: View {
         }
         .sheet(isPresented: $showAddContextProfile) {
             AddContextProfileView()
+                .environment(appState)
         }
     }
 
