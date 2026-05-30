@@ -1,14 +1,16 @@
 import StoreKit
 import Foundation
+import CryptoKit
 import Observation
 
 /// Manages the one-time premium unlock via StoreKit 2.
 /// Product ID: com.yiga.Lexora.premium (non-consumable, $4.99)
 ///
 /// Access model:
-///   isUnlocked = isPremium || isInFreeTrial
+///   isUnlocked = isPremium || isInFreeTrial || promoUnlocked
 ///   - First 60 days after install → all premium features free
 ///   - After 60 days → paywall appears; $4.99 unlocks forever
+///   - Promo code → permanent unlock, no payment required
 @Observable @MainActor
 final class StoreService {
 
@@ -16,7 +18,13 @@ final class StoreService {
 
     static let premiumProductID  = "com.yiga.Lexora.premium"
     static let trialDurationDays = 60
-    private static let installDateKey = "lexora.installDate"
+    private static let installDateKey  = "lexora.installDate"
+    private static let promoUnlockedKey = "lexora.promoUnlocked"
+
+    /// SHA-256 of the promo code (case-insensitive, trimmed).
+    /// To change the code: run  python3 -c "import hashlib; print(hashlib.sha256(b'YOUR-CODE'.lower().encode()).hexdigest())"
+    /// Current code: LEXORA-VIP-2026
+    private static let promoCodeHash = "3b53f9812cfc0d8c8fb748332b568cc4feca459e464f68d4f2ebd62702118453"
 
     // MARK: - State
 
@@ -30,6 +38,36 @@ final class StoreService {
     var purchaseError: String? = nil
     /// True once the initial entitlement check has completed.
     var entitlementChecked: Bool = false
+
+    // MARK: - Promo code unlock
+
+    /// Permanently true once a valid promo code has been redeemed.
+    /// Stored in UserDefaults so it survives app restarts.
+    var promoUnlocked: Bool = false {
+        didSet { UserDefaults.standard.set(promoUnlocked, forKey: Self.promoUnlockedKey) }
+    }
+
+    /// Result type for redeemCode(_:)
+    enum RedeemResult {
+        case success          // correct code, just unlocked
+        case alreadyUnlocked  // correct code, was already redeemed
+        case invalid          // wrong code
+    }
+
+    /// Validates `code` against the stored SHA-256 hash.
+    /// Comparison is case-insensitive and trims surrounding whitespace.
+    /// Returns `.success` on first valid redemption, `.alreadyUnlocked` if already redeemed.
+    @discardableResult
+    func redeemCode(_ code: String) -> RedeemResult {
+        let normalised = code.trimmingCharacters(in: .whitespaces).lowercased()
+        let digest     = SHA256.hash(data: Data(normalised.utf8))
+        let hex        = digest.map { String(format: "%02x", $0) }.joined()
+
+        guard hex == Self.promoCodeHash else { return .invalid }
+        if promoUnlocked { return .alreadyUnlocked }
+        promoUnlocked = true
+        return .success
+    }
 
     // MARK: - Trial
 
@@ -52,20 +90,24 @@ final class StoreService {
     }
 
     /// **Single source of truth for feature access.**
-    /// True when the user has paid OR is within the 60-day free trial.
+    /// True when the user has paid, is in the 60-day trial, or redeemed a promo code.
     var isUnlocked: Bool {
         #if DEBUG
         return true   // always unlocked in debug / TestFlight
         #else
-        return isPremium || isInFreeTrial
+        return isPremium || isInFreeTrial || promoUnlocked
         #endif
     }
 
     // MARK: - Init
 
     init() {
-        // Record install date the very first time the app launches.
         let defaults = UserDefaults.standard
+
+        // Restore promo-unlock state from previous launch
+        promoUnlocked = defaults.bool(forKey: Self.promoUnlockedKey)
+
+        // Record install date the very first time the app launches.
         if let stored = defaults.object(forKey: Self.installDateKey) as? Date {
             installDate = stored
         } else {

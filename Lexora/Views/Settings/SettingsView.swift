@@ -23,6 +23,11 @@ struct SettingsView: View {
     @State private var showRestoreAlert = false
     @State private var restoreMessage = ""
     @State private var isRestoring = false
+    @State private var showRedeemSheet = false
+    @State private var redeemCode = ""
+    @State private var redeemResult: RedeemResultState = .idle
+
+    enum RedeemResultState { case idle, success, alreadyUnlocked, invalid }
     @State private var showProfileImporter = false
     @State private var showImportResultAlert = false
     @State private var importResultMessage = ""
@@ -145,7 +150,7 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
             }
 
-            if !isPaid {
+            if !isPaid && !store.promoUnlocked {
                 Button {
                     Task { await appState.store.restore() }
                 } label: {
@@ -154,8 +159,134 @@ struct SettingsView: View {
                 }
                 .disabled(store.purchaseInProgress)
             }
+
+            // Promo / unlock code entry
+            if !isPaid && !store.promoUnlocked {
+                Button {
+                    redeemCode = ""
+                    redeemResult = .idle
+                    showRedeemSheet = true
+                } label: {
+                    Label("Enter unlock code", systemImage: "key.fill")
+                        .foregroundStyle(Color.accentColor)
+                }
+            } else if store.promoUnlocked && !isPaid {
+                HStack(spacing: 12) {
+                    Image(systemName: "key.fill")
+                        .foregroundStyle(.orange)
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Unlock code active")
+                            .font(.subheadline.weight(.semibold))
+                        Text("All features permanently unlocked via promo code.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
         } header: {
             Text("Subscription")
+        }
+        .sheet(isPresented: $showRedeemSheet) {
+            redeemSheet
+        }
+    }
+
+    // MARK: - Redeem Sheet
+
+    private var redeemSheet: some View {
+        NavigationStack {
+            VStack(spacing: 28) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.orange)
+                }
+                .padding(.top, 16)
+
+                VStack(spacing: 8) {
+                    Text("Enter Unlock Code")
+                        .font(.title2.bold())
+                    Text("A valid code unlocks all premium features permanently — no payment needed.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+
+                // Input field
+                VStack(spacing: 8) {
+                    TextField("Unlock code", text: $redeemCode)
+                        .textFieldStyle(.roundedBorder)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .onChange(of: redeemCode) { _, _ in redeemResult = .idle }
+
+                    // Feedback
+                    switch redeemResult {
+                    case .idle:
+                        Color.clear.frame(height: 20)
+                    case .success:
+                        Label("Code accepted — all features unlocked!", systemImage: "checkmark.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.green)
+                    case .alreadyUnlocked:
+                        Label("Already unlocked with this code.", systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    case .invalid:
+                        Label("Invalid code. Check for typos and try again.", systemImage: "xmark.circle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                // Redeem button
+                Button {
+                    let result = appState.store.redeemCode(redeemCode)
+                    switch result {
+                    case .success:        redeemResult = .success
+                    case .alreadyUnlocked: redeemResult = .alreadyUnlocked
+                    case .invalid:        redeemResult = .invalid
+                    }
+                    if result == .success {
+                        // Auto-dismiss after a short delay on success
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            showRedeemSheet = false
+                        }
+                    }
+                } label: {
+                    Text("Redeem")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(redeemCode.isEmpty ? Color(.systemGray4) : Color.orange,
+                                    in: RoundedRectangle(cornerRadius: 14))
+                        .foregroundStyle(redeemCode.isEmpty ? Color(.systemGray) : .white)
+                }
+                .disabled(redeemCode.trimmingCharacters(in: .whitespaces).isEmpty)
+                .padding(.horizontal, 32)
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+            .navigationTitle("Unlock Code")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showRedeemSheet = false }
+                }
+            }
         }
     }
 
