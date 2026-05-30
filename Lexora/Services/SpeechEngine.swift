@@ -149,7 +149,11 @@ final class SpeechEngine {
 
     func requestPermissions() {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
-            DispatchQueue.main.async {
+            // Use Task { @MainActor in } instead of DispatchQueue.main.async.
+            // On macOS 26 beta, DispatchQueue.main.async bypasses Swift Concurrency's
+            // executor tracking, leaving MainActor.assumeIsolated in a bad state that
+            // causes EXC_BAD_ACCESS when the next button tap occurs.
+            Task { @MainActor [weak self] in
                 self?.permissionStatus = status
             }
         }
@@ -299,7 +303,7 @@ final class SpeechEngine {
     private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
         guard let result = result else {
             if let error = error {
-                DispatchQueue.main.async { self.errorMessage = error.localizedDescription }
+                Task { @MainActor [weak self] in self?.errorMessage = error.localizedDescription }
             }
             return
         }
@@ -311,7 +315,7 @@ final class SpeechEngine {
         let confidence: Double = segments.isEmpty ? 0 :
             Double(segments.map { $0.confidence }.reduce(0, +)) / Double(segments.count)
 
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             // Run language detection on the growing transcript
@@ -399,10 +403,10 @@ final class SpeechEngine {
         let db = 20 * log10(rms)
         // Normalise: -60 dB = 0, 0 dB = 1
         let normalised = max(0, min(1, (db + 60) / 60))
-        DispatchQueue.main.async {
-            self.signalLevel = normalised
+        Task { @MainActor [weak self] in
+            self?.signalLevel = normalised
             // Any sound above a minimal threshold resets the silence timer.
-            if normalised > 0.05 { self.lastSignificantSoundDate = Date() }
+            if normalised > 0.05 { self?.lastSignificantSoundDate = Date() }
         }
     }
 

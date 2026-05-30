@@ -157,7 +157,8 @@ class KeyboardViewController: UIInputViewController {
                 if let result {
                     let raw       = result.bestTranscription.formattedString
                     let corrected = self.applyCorrections(to: raw)
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
                         self.currentText = corrected
                         self.rebuildUI()
                         if result.isFinal {
@@ -167,20 +168,21 @@ class KeyboardViewController: UIInputViewController {
                         }
                     }
                 }
-                if error != nil { DispatchQueue.main.async { self.stopDictation() } }
+                if error != nil {
+                    Task { @MainActor [weak self] in self?.stopDictation() }
+                }
             }
 
             let inputNode = audioEngine.inputNode
             let format    = inputNode.outputFormat(forBus: 0)
             inputNode.installTap(onBus: 0, bufferSize: 512, format: format) { [weak self] buffer, _ in
                 self?.recognitionRequest?.append(buffer)
-                // Compute RMS signal level for waveform animation
                 let channelData = buffer.floatChannelData?.pointee
                 let frameCount  = Int(buffer.frameLength)
                 if let data = channelData, frameCount > 0 {
                     let rms = (0..<frameCount).reduce(0.0) { $0 + Double(data[$1] * data[$1]) }
                     let level = Float(sqrt(rms / Double(frameCount)))
-                    DispatchQueue.main.async {
+                    Task { @MainActor [weak self] in
                         self?.signalLevel = min(1.0, level * 8)
                         self?.rebuildUI()
                     }
