@@ -21,7 +21,7 @@
 		55AC4BB9B7F6B389EB350F88 /* TranscriptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE89C9743ACAAFF51472EE2 /* TranscriptionHistoryView.swift */; };
 		5CECA479327DD8953DBF318A /* Color+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7A242E1F32C6853CB1D5B0 /* Color+Extensions.swift */; };
 		699AC419ECB10F135D3E9D0A /* RecordingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF9E9E578FFBCB18ED34548 /* RecordingActivityAttributes.swift */; };
-		717AB6B5EE05B55E361D2E71 /* LexoraWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 415CF52156FED86CBB841BCD /* LexoraWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		717AB6B5EE05B55E361D2E71 /* LexoraWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 415CF52156FED86CBB841BCD /* LexoraWidget.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		735F21CB84B327AE3D69DAD2 /* UserVoiceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B959BF794CEEBA8383316B2 /* UserVoiceProfile.swift */; };
 		7A993A4A5CE976500B563482 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 883C88A553EFAEBC177158DA /* Foundation.framework */; };
 		896F7798C7F006672D732628 /* VocabularyEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C138002AD12C2F0D4601E0 /* VocabularyEntry.swift */; };
@@ -29,7 +29,7 @@
 		A3DB7F7AFC421813008D9B8F /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCD54986991F6D8ED61D8087 /* OnboardingView.swift */; };
 		A9B0C1D2E3F4A5B6C7D8E93C /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C1D2E3F4A5B6C7D8E9F03D /* HapticManager.swift */; };
 		AA11BB22CC33DD44EE55FF67 /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* AIService.swift */; };
-		AB8F63511388D2BDB4E5D7D6 /* LexoraKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AB8F63511388D2BDB4E5D7D6 /* LexoraKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C3F4D8AF51FB904DA26F0B1 /* LexoraKeyboard.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AC123456789ABCDEF0123401 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC123456789ABCDEF0123400 /* Assets.xcassets */; };
 		AC8A9246EB0895007DE53EF9 /* LexoraTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D17F463E70267203B5D350 /* LexoraTests.swift */; };
 		AD968599D5718A06BFA9E3EA /* SpotlightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F99F91545EED51BA1C3975 /* SpotlightService.swift */; };
@@ -672,6 +672,9 @@
 		191734982F22ABEBB64A1AE0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SUPPORTS_MACCATALYST = YES;
+				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
@@ -718,6 +721,9 @@
 		72FB3ED29B4639D83EC5DB14 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SUPPORTS_MACCATALYST = YES;
+				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora-LocalDev.entitlements;

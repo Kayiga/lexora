@@ -720,7 +720,7 @@ struct RecordingView: View {
                     let marker = "\n[★ \(Date().formatted(date: .omitted, time: .shortened))]"
                     editedTranscript += marker
                     if appState.profile.hapticFeedbackEnabled {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        HapticManager.softConfirm()
                     }
                 } label: {
                     Image(systemName: "bookmark.fill")

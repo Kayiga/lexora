@@ -1,79 +1,74 @@
 import UIKit
 
 /// Centralised haptic feedback helper.
-///
-/// Marked `@MainActor` because UIKit feedback generators are main actor-isolated
-/// in iOS 18 / Swift 6. All call sites are already on the main actor (SwiftUI
-/// view bodies, button actions, onChange handlers), so this adds no extra hops.
-///
-/// Callers gate on `profile.hapticFeedbackEnabled` before calling; this
-/// class itself has no dependency on `UserVoiceProfile` so it can be used
-/// from any layer without a circular import.
+/// All haptic calls are no-ops on Mac Catalyst (no Taptic Engine).
 @MainActor
 enum HapticManager {
 
-    // MARK: - Shared generators (created once, reused to avoid first-play latency)
-
+#if !targetEnvironment(macCatalyst)
+    // Shared generators (iOS only — UIFeedbackGenerator unavailable on Mac)
     private static let impact  = UIImpactFeedbackGenerator(style: .medium)
     private static let heavy   = UIImpactFeedbackGenerator(style: .heavy)
     private static let light   = UIImpactFeedbackGenerator(style: .light)
     private static let notify  = UINotificationFeedbackGenerator()
     private static let select  = UISelectionFeedbackGenerator()
+#endif
 
     // MARK: - Recording lifecycle
 
-    /// Firm tap — recording begins.
     static func recordingStarted() {
-        heavy.prepare()
-        heavy.impactOccurred()
+#if !targetEnvironment(macCatalyst)
+        heavy.prepare(); heavy.impactOccurred()
+#endif
     }
 
-    /// Double tap — recording stops.
     static func recordingStopped() {
+#if !targetEnvironment(macCatalyst)
         heavy.prepare()
         heavy.impactOccurred(intensity: 0.8)
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.12))
             heavy.impactOccurred(intensity: 0.4)
         }
+#endif
     }
 
-    /// Soft bump — recording paused.
     static func recordingPaused() {
-        light.prepare()
-        light.impactOccurred()
+#if !targetEnvironment(macCatalyst)
+        light.prepare(); light.impactOccurred()
+#endif
     }
 
-    /// Soft bump — recording resumed.
     static func recordingResumed() {
-        light.prepare()
-        light.impactOccurred()
+#if !targetEnvironment(macCatalyst)
+        light.prepare(); light.impactOccurred()
+#endif
     }
 
     // MARK: - Milestone & success
 
-    /// Celebratory triple-tap when the user hits a word-count milestone.
     static func wordMilestone() {
-        notify.prepare()
-        notify.notificationOccurred(.success)
+#if !targetEnvironment(macCatalyst)
+        notify.prepare(); notify.notificationOccurred(.success)
+#endif
     }
 
-    /// Gentle tick for interactive list selection or language lock.
     static func selectionChanged() {
-        select.prepare()
-        select.selectionChanged()
+#if !targetEnvironment(macCatalyst)
+        select.prepare(); select.selectionChanged()
+#endif
     }
 
-    /// Error shake — e.g. permission denied.
     static func error() {
-        notify.prepare()
-        notify.notificationOccurred(.error)
+#if !targetEnvironment(macCatalyst)
+        notify.prepare(); notify.notificationOccurred(.error)
+#endif
     }
 
     // MARK: - Goal & achievement
 
-    /// Celebratory burst — user just crossed their daily word goal.
     static func goalAchieved() {
+#if !targetEnvironment(macCatalyst)
         notify.prepare()
         notify.notificationOccurred(.success)
         Task { @MainActor in
@@ -83,11 +78,12 @@ enum HapticManager {
             try? await Task.sleep(for: .seconds(0.16))
             heavy.impactOccurred(intensity: 0.5)
         }
+#endif
     }
 
-    /// Subtle confirmation — e.g. star toggled, tag added.
     static func softConfirm() {
-        light.prepare()
-        light.impactOccurred(intensity: 0.6)
+#if !targetEnvironment(macCatalyst)
+        light.prepare(); light.impactOccurred(intensity: 0.6)
+#endif
     }
 }

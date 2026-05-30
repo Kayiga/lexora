@@ -154,7 +154,7 @@ struct DashboardView: View {
             let todayStr = Calendar.current.startOfDay(for: Date()).formatted(.iso8601)
             guard goalCelebratedDateStr != todayStr else { return }
             goalCelebratedDateStr = todayStr
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            HapticManager.wordMilestone()
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 showGoalCelebration = true
             }
