@@ -56,6 +56,69 @@ final class SpeechEngine {
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
         self.learningEngine = learningEngine
+        subscribeToAudioSessionNotifications()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - AVAudioSession Interruption Handling
+
+    /// Registers for system audio interruptions (phone calls, Siri, alarms, etc.)
+    /// Without this, a call during recording silently breaks the audio engine
+    /// and leaves `isListening = true` with no session saved.
+    private func subscribeToAudioSessionNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioSessionInterruption(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioRouteChange(_:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    @objc private nonisolated func handleAudioSessionInterruption(_ note: Notification) {
+        guard let typeValue = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            switch type {
+            case .began:
+                // Phone call / Siri / alarm started — pause and save progress so far
+                if isListening {
+                    pauseListening()
+                }
+            case .ended:
+                // Interruption over — only auto-resume if the system says it's safe
+                let optionsValue = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume), isPaused {
+                    try? resumeListening()
+                }
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    @objc private nonisolated func handleAudioRouteChange(_ note: Notification) {
+        guard let reasonValue = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
+
+        // Headphones unplugged → stop recording to avoid capturing silence or wrong mic
+        if reason == .oldDeviceUnavailable {
+            Task { @MainActor [weak self] in
+                guard let self, isListening else { return }
+                pauseListening()
+            }
+        }
     }
 
     // MARK: - Silence Auto-Stop
