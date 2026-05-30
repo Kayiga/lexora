@@ -74,6 +74,7 @@ struct DashboardView: View {
                     // iPhone: single-column layout
                     VStack(spacing: 20) {
                         greetingHeader
+                        trialCountdownBanner
                         if appState.sessions.isEmpty {
                             firstTimeBanner
                         } else {
@@ -1144,8 +1145,99 @@ struct DashboardView: View {
         .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
     }
 
+    // MARK: - Trial Countdown Banner
+
+    @State private var showPaywallFromBanner = false
+
+    /// Shows a gentle trial countdown during the last 14 days.
+    /// Hidden when paid or when > 14 days remain (no nagging during the full trial).
     @ViewBuilder
-    private var streakAtRiskBanner: some View {
+    private var trialCountdownBanner: some View {
+        let days = appState.store.trialDaysRemaining
+        let isTrialActive = appState.store.isInFreeTrial
+        let isExpired = !appState.store.isUnlocked   // expired & not paid
+
+        if isExpired {
+            // Trial ended — persistent upgrade prompt
+            Button {
+                showPaywallFromBanner = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "crown.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your 60-day free trial has ended")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Upgrade for $4.99 to keep all features.")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(14)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 0.45, green: 0.10, blue: 0.65),
+                                 Color(red: 0.56, green: 0.18, blue: 0.82)],
+                        startPoint: .leading, endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14)
+                )
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showPaywallFromBanner) {
+                PremiumPaywallView()
+                    .environment(appState)
+            }
+        } else if isTrialActive && days <= 14 {
+            // Gentle nudge in the last 14 days
+            Button {
+                showPaywallFromBanner = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .font(.title3)
+                        .foregroundStyle(days <= 3 ? .red : .orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(days == 1
+                             ? "Last day of your free trial"
+                             : "\(days) days left in your free trial")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Upgrade once to keep everything, forever.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("$4.99")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background((days <= 3 ? Color.red : Color.orange).opacity(0.15),
+                                    in: Capsule())
+                        .foregroundStyle(days <= 3 ? .red : .orange)
+                }
+                .padding(14)
+                .background(Color(.secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke((days <= 3 ? Color.red : Color.orange).opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showPaywallFromBanner) {
+                PremiumPaywallView()
+                    .environment(appState)
+            }
+        }
+    }
+
+    @ViewBuilder private var streakAtRiskBanner: some View {
         if shouldShowStreakAtRiskBanner {
             HStack(spacing: 12) {
                 Text("🔥")

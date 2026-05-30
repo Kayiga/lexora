@@ -4,16 +4,23 @@ import Observation
 
 /// Manages the one-time premium unlock via StoreKit 2.
 /// Product ID: com.yiga.Lexora.premium (non-consumable, $4.99)
+///
+/// Access model:
+///   isUnlocked = isPremium || isInFreeTrial
+///   - First 60 days after install → all premium features free
+///   - After 60 days → paywall appears; $4.99 unlocks forever
 @Observable @MainActor
 final class StoreService {
 
     // MARK: - Constants
 
-    static let premiumProductID = "com.yiga.Lexora.premium"
+    static let premiumProductID  = "com.yiga.Lexora.premium"
+    static let trialDurationDays = 60
+    private static let installDateKey = "lexora.installDate"
 
     // MARK: - State
 
-    /// Whether the user currently holds a verified premium entitlement.
+    /// Whether the user holds a verified paid premium entitlement.
     var isPremium: Bool = false
     /// The fetched product (nil until loaded, or in simulator without StoreKit config).
     var premiumProduct: Product? = nil
@@ -24,13 +31,52 @@ final class StoreService {
     /// True once the initial entitlement check has completed.
     var entitlementChecked: Bool = false
 
+    // MARK: - Trial
+
+    /// Date the app was first launched. Written once; never changes.
+    private(set) var installDate: Date
+
+    /// True if the 60-day free trial is currently active.
+    var isInFreeTrial: Bool {
+        guard !isPremium else { return false }   // paid users don't need the trial flag
+        return trialDaysRemaining > 0
+    }
+
+    /// Calendar days left in the free trial (0 when expired or paid).
+    var trialDaysRemaining: Int {
+        guard !isPremium else { return 0 }
+        let elapsed = Calendar.current.dateComponents(
+            [.day], from: installDate, to: Date()
+        ).day ?? Self.trialDurationDays
+        return max(0, Self.trialDurationDays - elapsed)
+    }
+
+    /// **Single source of truth for feature access.**
+    /// True when the user has paid OR is within the 60-day free trial.
+    var isUnlocked: Bool {
+        #if DEBUG
+        return true   // always unlocked in debug / TestFlight
+        #else
+        return isPremium || isInFreeTrial
+        #endif
+    }
+
     // MARK: - Init
 
     init() {
+        // Record install date the very first time the app launches.
+        let defaults = UserDefaults.standard
+        if let stored = defaults.object(forKey: Self.installDateKey) as? Date {
+            installDate = stored
+        } else {
+            let now = Date()
+            defaults.set(now, forKey: Self.installDateKey)
+            installDate = now
+        }
+
         Task {
             await loadProducts()
             await refreshEntitlement()
-            // Start listening for external transaction updates (e.g. family sharing, refunds)
             listenForTransactionUpdates()
         }
     }
@@ -101,12 +147,6 @@ final class StoreService {
         }
         isPremium = found
         entitlementChecked = true
-
-        // Debug / TestFlight / Simulator: always unlock so the app is usable during development.
-        #if DEBUG
-        isPremium = true
-        entitlementChecked = true
-        #endif
     }
 
     // MARK: - Transaction listener
@@ -120,7 +160,6 @@ final class StoreService {
                         if tx.productID == Self.premiumProductID && tx.revocationDate == nil {
                             self.isPremium = true
                         } else if tx.revocationDate != nil {
-                            // Refund received
                             Task { await self.refreshEntitlement() }
                         }
                     }

@@ -73,9 +73,14 @@ struct SettingsView: View {
     // MARK: - Sections
 
     private var premiumSection: some View {
-        let isPremium = appState.store.isPremium
+        let store = appState.store
+        let isUnlocked = store.isUnlocked
+        let isPaid     = store.isPremium
+        let inTrial    = store.isInFreeTrial
+        let daysLeft   = store.trialDaysRemaining
         return Section {
-            if isPremium {
+            if isPaid {
+                // Paid subscriber
                 HStack(spacing: 12) {
                     Image(systemName: "crown.fill")
                         .foregroundStyle(Color(red: 0.56, green: 0.18, blue: 0.82))
@@ -91,7 +96,31 @@ struct SettingsView: View {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green)
                 }
+            } else if inTrial {
+                // In free trial — show days remaining
+                HStack(spacing: 12) {
+                    Image(systemName: "gift.fill")
+                        .foregroundStyle(daysLeft <= 7 ? .orange : Color(red: 0.56, green: 0.18, blue: 0.82))
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Free trial active")
+                            .font(.subheadline.weight(.semibold))
+                        Text(daysLeft == 1
+                             ? "Last day — all features unlocked"
+                             : "\(daysLeft) days remaining — all features unlocked")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if daysLeft <= 14 {
+                        // Show upgrade prompt only when getting close
+                        Button("Upgrade") { showPaywall = true }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.56, green: 0.18, blue: 0.82))
+                    }
+                }
             } else {
+                // Trial expired
                 Button {
                     showPaywall = true
                 } label: {
@@ -103,7 +132,7 @@ struct SettingsView: View {
                             Text("Upgrade to Lexora Premium")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
-                            Text("One-time $4.99 · Unlock all features")
+                            Text("60-day free trial ended · One-time $4.99")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -114,14 +143,16 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.plain)
+            }
 
+            if !isPaid {
                 Button {
                     Task { await appState.store.restore() }
                 } label: {
                     Label("Restore purchase", systemImage: "arrow.clockwise")
                         .foregroundStyle(Color.accentColor)
                 }
-                .disabled(appState.store.purchaseInProgress)
+                .disabled(store.purchaseInProgress)
             }
         } header: {
             Text("Subscription")
@@ -720,7 +751,7 @@ struct SettingsView: View {
             .disabled(appState.sessions.isEmpty)
 
             Button {
-                if appState.store.isPremium { exportTranscriptsPDF() } else { showPaywall = true }
+                if appState.store.isUnlocked { exportTranscriptsPDF() } else { showPaywall = true }
             } label: {
                 Label("Export transcripts (PDF)", systemImage: "doc.richtext")
             }

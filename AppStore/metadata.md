@@ -14,7 +14,7 @@ All character counts are verified against Apple's limits.
 | **Category (Primary)** | Productivity |
 | **Category (Secondary)** | Utilities |
 | **Content Rating** | 4+ |
-| **Price** | Free (Premium IAP: $4.99) |
+| **Price** | Free — 60-day full trial, then $4.99 one-time (Premium IAP) |
 | **Bundle ID** | com.yiga.Lexora |
 | **SKU** | LEXORA-1 |
 
@@ -45,7 +45,7 @@ Unlike basic voice-to-text apps, Lexora gets smarter every time you use it. Ever
 
 **Lexora Premium — one-time purchase**
 
-• Unlimited session history (free: last 10 sessions)
+• Unlimited session history (free trial includes everything for 60 days)
 • AI Insights: GPT-4o mini generates abstractive summaries, extracts action items, and suggests follow-up questions — using your own OpenAI key, stored securely in the iOS Keychain
 • Reading Mode: distraction-free transcript reader with adjustable font size and a live progress bar
 • Export as HTML webpage (dark-mode aware, print-ready, shareable)

@@ -71,9 +71,9 @@ struct PremiumPaywallView: View {
             }
 
             VStack(spacing: 6) {
-                Text("Unlock everything")
+                Text("Your free trial has ended")
                     .font(.title2.bold())
-                Text("One payment. No subscription. Yours forever.")
+                Text("You've had 60 days of everything for free.\nKeep access with a one-time purchase.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
