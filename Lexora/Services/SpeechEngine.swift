@@ -190,7 +190,7 @@ final class SpeechEngine {
     func stopListening() {
         silenceCheckTask?.cancel()
         silenceCheckTask = nil
-        audioEngine.stop()
+        if audioEngine.isRunning { audioEngine.stop() }
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
@@ -198,6 +198,11 @@ final class SpeechEngine {
         recognitionTask = nil
         isListening = false
         isPaused = false
+
+#if !targetEnvironment(macCatalyst)
+        // Deactivate audio session so other apps can resume playback.
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+#endif
 
         finaliseSession()
     }
@@ -235,19 +240,25 @@ final class SpeechEngine {
     }
 
     private func startAudioEngine() throws {
+        // AVAudioSession category/active calls are iOS-only.
+        // On Mac Catalyst the framework is a stub and setCategory throws runtime
+        // exceptions that bypass Swift's try/catch — skip entirely on Mac.
+#if !targetEnvironment(macCatalyst)
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement, options: .duckOthers)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
+#endif
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let request = recognitionRequest else { throw SpeechError.engineFailed }
 
-        // On-device recognition for privacy + offline support
-        request.requiresOnDeviceRecognition = true
+        // On-device recognition: preferred for privacy, but may be unavailable on Mac.
+        // Fall back to server-based if the device/OS doesn't support on-device.
+        let supportsOnDevice = recognizer?.supportsOnDeviceRecognition ?? false
+        request.requiresOnDeviceRecognition = supportsOnDevice
         request.shouldReportPartialResults = true
         request.taskHint = .dictation
 
-        // Inject learned vocabulary hints for higher accuracy
         let hints = learningEngine.buildRecognitionHints()
         request.contextualStrings = hints
 
@@ -256,7 +267,23 @@ final class SpeechEngine {
         }
 
         let inputNode = audioEngine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
+
+        // Remove any existing tap before installing a new one.
+        // Calling installTap while a tap is already installed crashes immediately.
+        inputNode.removeTap(onBus: 0)
+
+        // On Mac Catalyst the input node may report 0 channels before a mic is
+        // confirmed — fall back to a safe mono 44.1 kHz format.
+        let rawFormat = inputNode.outputFormat(forBus: 0)
+        let format: AVAudioFormat
+        if rawFormat.channelCount > 0 {
+            format = rawFormat
+        } else {
+            guard let safe = AVAudioFormat(
+                standardFormatWithSampleRate: 44_100, channels: 1
+            ) else { throw SpeechError.engineFailed }
+            format = safe
+        }
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
