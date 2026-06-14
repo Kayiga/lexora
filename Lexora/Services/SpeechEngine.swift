@@ -43,10 +43,6 @@ final class SpeechEngine {
     private var lastWordTime: Date?
     private var pauseThresholdMS: Double = 500   // Learned dynamically per user
 
-    // Language-switching: try alternate recogniser when confidence drops
-    private var secondaryRecognizer: SFSpeechRecognizer?
-    private var activeLanguage: String = "en-US"
-
     // Silence auto-stop
     private var silenceAutoStopEnabled = false
     private var silenceTimeoutSeconds: TimeInterval = 10
@@ -192,6 +188,15 @@ final class SpeechEngine {
     }
 
     func stopListening() {
+        // Guard against double-stop (e.g. user tap + silence timer firing together),
+        // which would finalise the session twice.
+        guard isListening || isPaused else { return }
+
+        // Flip the flag FIRST so any in-flight recognition callback bails out
+        // (handleRecognitionResult guards on isListening) before we tear down.
+        isListening = false
+        isPaused = false
+
         silenceCheckTask?.cancel()
         silenceCheckTask = nil
         if audioEngine.isRunning { audioEngine.stop() }
@@ -200,8 +205,6 @@ final class SpeechEngine {
         recognitionTask?.cancel()
         recognitionRequest = nil
         recognitionTask = nil
-        isListening = false
-        isPaused = false
 
 #if !targetEnvironment(macCatalyst)
         // Deactivate audio session so other apps can resume playback.
@@ -240,7 +243,6 @@ final class SpeechEngine {
             return
         }
         self.recognizer = recognizer
-        activeLanguage = language
     }
 
     private func startAudioEngine() throws {
@@ -317,17 +319,20 @@ final class SpeechEngine {
 
         Task { @MainActor [weak self] in
             guard let self else { return }
+            // Ignore any results that arrive after the user stopped (or while
+            // paused) — processing them would mutate a finalised/!nil session
+            // and can crash on the stop path.
+            guard isListening else { return }
 
-            // Run language detection on the growing transcript
+            // Run language detection on the growing transcript — for the on-screen
+            // label and the final session's primaryLanguage ONLY. We deliberately
+            // do NOT restart the recogniser mid-session: tearing it down and
+            // calling startListening() reset currentTranscript to "" (purging
+            // everything spoken so far) and caused a crash on stop.
             let langResult = languageIntelligence.detect(text: transcript)
             if langResult.language != detectedLanguage && langResult.confidence > 0.7 {
                 detectedLanguage = langResult.language
                 onLanguageDetected?(langResult.language, langResult.confidence)
-
-                // If a new language is confidently detected, hot-swap recogniser
-                if result.isFinal {
-                    try? switchRecogniserIfNeeded(to: langResult.language)
-                }
             }
 
             // Track pace
@@ -383,13 +388,6 @@ final class SpeechEngine {
             let wordCount = Double(segments.count)
             currentWPM = (wordCount / elapsed) * 60
         }
-    }
-
-    private func switchRecogniserIfNeeded(to language: String) throws {
-        guard language != activeLanguage else { return }
-        // Gracefully swap recogniser mid-stream for code-switching
-        stopListening()
-        try startListening(language: language)
     }
 
     // MARK: - Signal Level
