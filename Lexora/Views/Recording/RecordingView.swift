@@ -514,7 +514,8 @@ struct RecordingView: View {
             ) {
                 UIPasteboard.general.string = editedTranscript
                 withAnimation { showCopiedFeedback = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
                     withAnimation { showCopiedFeedback = false }
                 }
             }
@@ -700,7 +701,8 @@ struct RecordingView: View {
             Button {
                 UIPasteboard.general.string = editedTranscript
                 withAnimation { showCopiedFeedback = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
                     withAnimation { showCopiedFeedback = false }
                 }
             } label: {
@@ -807,7 +809,8 @@ struct RecordingView: View {
                 // Donate TipKit event so the pause tip can surface next session
                 Task { await PauseRecordingTip.recordingCount.donate() }
                 // Show stats sheet after a brief delay so session is finalised
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.6))
                     if engine.lastFinishedSession != nil {
                         showSessionStats = true
                     }
@@ -1221,7 +1224,8 @@ struct RecordingView: View {
         }
         if appState.profile.hapticFeedbackEnabled { HapticManager.recordingPaused() }
         // Second haptic burst to signal the end of the focus block
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.4))
             if appState.profile.hapticFeedbackEnabled { HapticManager.wordMilestone() }
         }
     }

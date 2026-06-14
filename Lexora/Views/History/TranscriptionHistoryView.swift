@@ -2451,7 +2451,8 @@ struct SessionDetailView: View {
                 spellCheckAllClear = true
                 showSpellPanel = false
                 // Auto-hide the all-clear badge after 2 s
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(2))
                     withAnimation { spellCheckAllClear = false }
                 }
             } else {

@@ -599,8 +599,11 @@ struct VoiceProfileView: View {
     private func importFromContacts() {
         let store = CNContactStore()
         store.requestAccess(for: .contacts) { granted, error in
+            // CNContactStore callbacks fire on a background queue. Hop to the main
+            // actor via Task { @MainActor in } (not DispatchQueue.main.async) so the
+            // Swift Concurrency executor state stays valid on macOS 26.
             guard granted else {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     contactImportStatus = "Contacts access was not granted. Enable it in Settings → Privacy → Contacts."
                     showImportContacts = true
                 }
@@ -624,16 +627,17 @@ struct VoiceProfileView: View {
                     }
                 }
             } catch {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     contactImportStatus = "Could not read contacts: \(error.localizedDescription)"
                     showImportContacts = true
                 }
                 return
             }
 
-            DispatchQueue.main.async {
+            let namesToAdd = importedNames
+            Task { @MainActor in
                 var addedCount = 0
-                for name in importedNames {
+                for name in namesToAdd {
                     let entry = VocabularyEntry(
                         term: name,
                         phonetic: nil,
@@ -1092,7 +1096,10 @@ struct VocabularyRowView: View {
                         utterance.rate = 0.45
                         synthesizer.speak(utterance)
                         isSpeaking = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { isSpeaking = false }
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.5))
+                            isSpeaking = false
+                        }
                     } label: {
                         Image(systemName: isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.1")
                             .font(.caption2)

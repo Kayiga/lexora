@@ -348,9 +348,7 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .lexoraStartRecording)) { note in
             deepLinkedLanguage = note.userInfo?["language"] as? String
-#if !targetEnvironment(macCatalyst)
             showingRecorder = true
-#endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .lexoraOpenHistory)) { _ in
             selectedTab = 3
@@ -375,9 +373,7 @@ struct MainTabView: View {
             switch url.host {
             case "record":
                 deepLinkedLanguage = comps?.queryItems?.first(where: { $0.name == "language" })?.value
-#if !targetEnvironment(macCatalyst)
                 showingRecorder = true
-#endif
             case "history":
                 selectedTab = 3
             case "profile":
@@ -421,9 +417,7 @@ struct MainTabView: View {
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == 1 {
-#if !targetEnvironment(macCatalyst)
                 showingRecorder = true
-#endif
                 Task { @MainActor in try? await Task.sleep(for: .milliseconds(50)); selectedTab = 0 }
             }
             if tab == 3 {
@@ -458,11 +452,7 @@ struct MainTabView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-#if targetEnvironment(macCatalyst)
-                        // Recording disabled on Mac — macOS 26 beta AVAudioEngine bug
-#else
                         showingRecorder = true
-#endif
                     } label: {
                         Label("Record", systemImage: "mic.circle.fill")
                             .font(.title3)

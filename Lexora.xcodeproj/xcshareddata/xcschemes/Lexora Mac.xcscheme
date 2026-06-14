@@ -50,6 +50,13 @@
             ReferencedContainer = "container:Lexora.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "SWIFT_IS_CURRENT_EXECUTOR_LEGACY_MODE_OVERRIDE"
+            value = "legacy"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

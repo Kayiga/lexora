@@ -181,7 +181,7 @@ struct OnboardingView: View {
                     granted: micAuthGranted,
                     action: {
                         AVAudioApplication.requestRecordPermission { granted in
-                            DispatchQueue.main.async { micAuthGranted = granted }
+                            Task { @MainActor in micAuthGranted = granted }
                         }
                     }
                 )
@@ -193,7 +193,7 @@ struct OnboardingView: View {
                     granted: speechAuthGranted,
                     action: {
                         SFSpeechRecognizer.requestAuthorization { status in
-                            DispatchQueue.main.async { speechAuthGranted = status == .authorized }
+                            Task { @MainActor in speechAuthGranted = status == .authorized }
                         }
                     }
                 )

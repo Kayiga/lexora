@@ -7,7 +7,6 @@ struct DashboardView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingRecorder = false
-    @State private var showingMacRecordingUnavailable = false
     @State private var showingAnalytics = false
     @State private var selectedSession: TranscriptionSession? = nil
     @State private var showingQuickNote = false
@@ -128,9 +127,6 @@ struct DashboardView: View {
             RecordingView(initialLanguage: quickRecordLanguage)
                 .environment(appState)
         }
-        .sheet(isPresented: $showingMacRecordingUnavailable) {
-            macRecordingUnavailableSheet
-        }
         .sheet(isPresented: $showingAnalytics) {
             AnalyticsView()
                 .environment(appState)
@@ -173,60 +169,13 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Mac Catalyst Recording Guard
+    // MARK: - Recording entry point
 
-    /// Routes all "start recording" taps.
-    /// On Mac Catalyst (macOS 26 beta), AVAudioEngine + SwiftUI button dispatch
-    /// causes an EXC_BAD_ACCESS in MainActor.assumeIsolated — a confirmed Apple
-    /// framework bug. We show an explanation instead of crashing.
+    /// Routes all "start recording" taps. Recording works on both iPhone and Mac;
+    /// the macOS 26 executor crash is mitigated by the legacy-executor override
+    /// set in the "Lexora Mac" scheme (SWIFT_IS_CURRENT_EXECUTOR_LEGACY_MODE_OVERRIDE).
     private func macSafeRecord() {
-#if targetEnvironment(macCatalyst)
-        showingMacRecordingUnavailable = true
-#else
         showingRecorder = true
-#endif
-    }
-
-    private var macRecordingUnavailableSheet: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "mic.slash.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.orange)
-                    .padding(.top, 32)
-
-                VStack(spacing: 10) {
-                    Text("Recording unavailable on Mac")
-                        .font(.title2.bold())
-                    Text("Due to a bug in macOS 26 beta, audio recording crashes the app on Mac. This will be fixed in a future macOS update.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Use Lexora on your iPhone to record", systemImage: "iphone")
-                    Label("Transcripts sync automatically via iCloud", systemImage: "icloud.fill")
-                    Label("All other Mac features work normally", systemImage: "checkmark.circle.fill")
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(20)
-                .background(Color(.secondarySystemGroupedBackground),
-                            in: RoundedRectangle(cornerRadius: 14))
-                .padding(.horizontal, 24)
-
-                Spacer()
-            }
-            .navigationTitle("Mac Recording")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { showingMacRecordingUnavailable = false }
-                }
-            }
-        }
     }
 
     // MARK: - Review Prompt

@@ -12,11 +12,17 @@ final class SpotlightService {
 
     // MARK: - Indexing
 
+    // CoreSpotlight completion handlers fire on a background queue. Hop back to
+    // the main actor via Task { @MainActor in } (never DispatchQueue.main.async)
+    // so the Swift Concurrency executor state stays consistent on macOS 26.
+
     /// Index (or reindex) one session.
     func index(_ session: TranscriptionSession) {
         let item = searchableItem(for: session)
         index.indexSearchableItems([item]) { error in
-            if let error { print("[Spotlight] index error: \(error)") }
+            if let error {
+                Task { @MainActor in print("[Spotlight] index error: \(error)") }
+            }
         }
     }
 
@@ -25,21 +31,27 @@ final class SpotlightService {
     func indexAll(_ sessions: [TranscriptionSession]) {
         let items = sessions.map { searchableItem(for: $0) }
         index.indexSearchableItems(items) { error in
-            if let error { print("[Spotlight] bulk index error: \(error)") }
+            if let error {
+                Task { @MainActor in print("[Spotlight] bulk index error: \(error)") }
+            }
         }
     }
 
     /// Remove a single session from the index.
     func deindex(_ session: TranscriptionSession) {
         index.deleteSearchableItems(withIdentifiers: [session.id.uuidString]) { error in
-            if let error { print("[Spotlight] deindex error: \(error)") }
+            if let error {
+                Task { @MainActor in print("[Spotlight] deindex error: \(error)") }
+            }
         }
     }
 
     /// Remove ALL Lexora sessions from the index.
     func deindexAll() {
         index.deleteSearchableItems(withDomainIdentifiers: [Self.domainIdentifier]) { error in
-            if let error { print("[Spotlight] deindex-all error: \(error)") }
+            if let error {
+                Task { @MainActor in print("[Spotlight] deindex-all error: \(error)") }
+            }
         }
     }
 

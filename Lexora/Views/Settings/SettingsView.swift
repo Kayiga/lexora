@@ -83,7 +83,6 @@ struct SettingsView: View {
 
     private var premiumSection: some View {
         let store = appState.store
-        let isUnlocked = store.isUnlocked
         let isPaid     = store.isPremium
         let inTrial    = store.isInFreeTrial
         let daysLeft   = store.trialDaysRemaining
@@ -266,7 +265,8 @@ struct SettingsView: View {
                     }
                     if result == .success {
                         // Auto-dismiss after a short delay on success
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.5))
                             showRedeemSheet = false
                         }
                     }
@@ -822,7 +822,10 @@ struct SettingsView: View {
                         appState.ai.saveKey(apiKeyInput)
                         apiKeyInput = ""
                         aiKeySaved = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { aiKeySaved = false }
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(2))
+                            aiKeySaved = false
+                        }
                     } label: {
                         Label(aiKeySaved ? "Saved!" : "Save key", systemImage: aiKeySaved ? "checkmark" : "key.fill")
                             .frame(maxWidth: .infinity)
