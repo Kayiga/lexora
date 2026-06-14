@@ -305,6 +305,7 @@ struct MainTabView: View {
 
     @State private var selectedTab = 0
     @State private var showingRecorder = false
+    @State private var showingMacRecordingUnavailable = false
     @State private var deepLinkedSessionID: UUID? = nil
     @State private var deepLinkedLanguage: String? = nil
     @State private var deepLinkedSearchQuery: String? = nil
@@ -330,6 +331,11 @@ struct MainTabView: View {
             }
         }
         // ── All deep-link / sheet modifiers live here once, shared by both layouts ──
+        .alert("Recording isn't available on Mac yet", isPresented: $showingMacRecordingUnavailable) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Audio recording crashes on the current macOS beta. Use Lexora on your iPhone to record — your transcripts sync here automatically via iCloud. Everything else works on Mac.")
+        }
         .sheet(isPresented: $showingRecorder, onDismiss: { deepLinkedLanguage = nil }) {
             RecordingView(initialLanguage: deepLinkedLanguage)
                 .presentationDetents(horizontalSizeClass == .regular ? [.large] : [.medium, .large])
@@ -348,7 +354,9 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .lexoraStartRecording)) { note in
             deepLinkedLanguage = note.userInfo?["language"] as? String
+#if !targetEnvironment(macCatalyst)   // recording disabled on Mac — macOS 26 beta AVAudioEngine crash
             showingRecorder = true
+#endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .lexoraOpenHistory)) { _ in
             selectedTab = 3
@@ -373,7 +381,9 @@ struct MainTabView: View {
             switch url.host {
             case "record":
                 deepLinkedLanguage = comps?.queryItems?.first(where: { $0.name == "language" })?.value
+#if !targetEnvironment(macCatalyst)
                 showingRecorder = true
+#endif
             case "history":
                 selectedTab = 3
             case "profile":
@@ -417,7 +427,9 @@ struct MainTabView: View {
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == 1 {
+#if !targetEnvironment(macCatalyst)
                 showingRecorder = true
+#endif
                 Task { @MainActor in try? await Task.sleep(for: .milliseconds(50)); selectedTab = 0 }
             }
             if tab == 3 {
@@ -452,7 +464,11 @@ struct MainTabView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+#if targetEnvironment(macCatalyst)
+                        showingMacRecordingUnavailable = true
+#else
                         showingRecorder = true
+#endif
                     } label: {
                         Label("Record", systemImage: "mic.circle.fill")
                             .font(.title3)

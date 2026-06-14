@@ -7,6 +7,7 @@ struct DashboardView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingRecorder = false
+    @State private var showingMacRecordingUnavailable = false
     @State private var showingAnalytics = false
     @State private var selectedSession: TranscriptionSession? = nil
     @State private var showingQuickNote = false
@@ -127,6 +128,11 @@ struct DashboardView: View {
             RecordingView(initialLanguage: quickRecordLanguage)
                 .environment(appState)
         }
+        .alert("Recording isn't available on Mac yet", isPresented: $showingMacRecordingUnavailable) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Audio recording crashes on the current macOS beta. Use Lexora on your iPhone to record — your transcripts sync here automatically via iCloud. Everything else works on Mac.")
+        }
         .sheet(isPresented: $showingAnalytics) {
             AnalyticsView()
                 .environment(appState)
@@ -174,8 +180,18 @@ struct DashboardView: View {
     /// Routes all "start recording" taps. Recording works on both iPhone and Mac;
     /// the macOS 26 executor crash is mitigated by the legacy-executor override
     /// set in the "Lexora Mac" scheme (SWIFT_IS_CURRENT_EXECUTOR_LEGACY_MODE_OVERRIDE).
+    ///
+    /// Recording is disabled on Mac Catalyst: AVAudioEngine + Swift Concurrency
+    /// crash with EXC_BAD_ACCESS (null isa) in objc_lookUpImpOrForward on
+    /// macOS 26.5 beta — a runtime bug the executor override can't reach. The
+    /// rest of the Mac app works; recording stays iPhone-only until Apple ships
+    /// a fix. Remove this guard once macOS 26 is stable.
     private func macSafeRecord() {
+#if targetEnvironment(macCatalyst)
+        showingMacRecordingUnavailable = true
+#else
         showingRecorder = true
+#endif
     }
 
     // MARK: - Review Prompt
