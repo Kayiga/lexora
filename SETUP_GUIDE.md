@@ -128,7 +128,7 @@ git push origin v1.0.0
 ## Project structure
 
 ```
-LinguaFlow/
+Lexora/   (project root)
 ├── Lexora.xcodeproj/          ← open this in Xcode
 │   └── project.pbxproj        ← all 37 files wired up, 3 targets configured
 │

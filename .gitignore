@@ -34,6 +34,5 @@ Packages/
 # Log files
 *.log
 
-# Stale project files at repo root
-LinguaFlow.xcodeproj/
+# Stale source files at repo root
 icon_1024.png
