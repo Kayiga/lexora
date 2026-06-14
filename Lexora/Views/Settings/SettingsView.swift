@@ -1209,8 +1209,6 @@ struct SettingsView: View {
         humanDF.timeStyle = .short
 
         let pages: [String] = appState.sessions.map { session in
-            let lang = Locale.current.localizedString(forLanguageCode: session.primaryLanguage)
-                       ?? session.primaryLanguage
             let title = session.customTitle?.isEmpty == false
                 ? session.customTitle!
                 : String(session.finalTranscript.prefix(60))

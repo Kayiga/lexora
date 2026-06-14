@@ -44,7 +44,7 @@ final class CloudSyncService {
         guard let db = privateDB else { return }
         let zone = CKRecordZone(zoneID: zoneID)
         do {
-            try await db.save(zone)
+            _ = try await db.save(zone)
         } catch let error as CKError where error.code == .serverRecordChanged {
             // Zone already exists — that's fine
         } catch {
@@ -59,7 +59,7 @@ final class CloudSyncService {
         syncState = .syncing
         do {
             let record = try profileToRecord(profile)
-            try await db.save(record)
+            _ = try await db.save(record)
             lastSyncDate = Date()
             syncState = .synced
         } catch {
@@ -95,7 +95,7 @@ final class CloudSyncService {
         guard let db = privateDB else { return }
         do {
             let record = try sessionToRecord(session)
-            try await db.save(record)
+            _ = try await db.save(record)
         } catch {
             // Non-fatal — session history upload failures are silent
         }

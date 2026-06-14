@@ -90,7 +90,7 @@ enum SRTExportService {
         guard !words.isEmpty else { return [] }
 
         let chunkSize = 10
-        var chunks: [String] = stride(from: 0, to: words.count, by: chunkSize).map { start in
+        let chunks: [String] = stride(from: 0, to: words.count, by: chunkSize).map { start in
             let end = min(start + chunkSize, words.count)
             return words[start..<end].joined(separator: " ")
         }

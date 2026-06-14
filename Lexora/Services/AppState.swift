@@ -641,10 +641,11 @@ final class AppState {
               || wordMilestones.contains(where: { totalWords >= $0 && totalWords - lastSessionWords < $0 })
         else { return }
 
-        // Find the key window and request the review via the current scene.
+        // Find the foreground scene and request the review (modern API,
+        // replaces the deprecated SKStoreReviewController.requestReview(in:)).
         if let scene = UIApplication.shared.connectedScenes
             .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            SKStoreReviewController.requestReview(in: scene)
+            AppStore.requestReview(in: scene)
         }
     }
 

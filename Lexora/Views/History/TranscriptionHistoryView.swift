@@ -4,6 +4,7 @@ import TipKit
 import NaturalLanguage
 import UIKit
 import AVFoundation
+import Combine
 
 // ── Tab entry-point: adds NavigationStack so the view works as a standalone tab ──
 struct TranscriptionHistoryView: View {
@@ -1437,7 +1438,11 @@ struct SessionDetailView: View {
     @State private var audioDuration: Double = 0
     @State private var audioCurrentTime: Double = 0
     @State private var playbackRate: Float = 1.0          // 0.5 / 1 / 1.5 / 2
-    private let audioTimer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
+    // Erase to AnyPublisher so the stored property's type is a public Combine type
+    // (avoids the "Cannot use generic class 'Autoconnect' / enum 'Publishers'" warnings).
+    private let audioTimer = Timer.publish(every: 0.25, on: .main, in: .common)
+        .autoconnect()
+        .eraseToAnyPublisher()
 
     // Diff view
     @State private var showDiffSheet = false
@@ -3716,7 +3721,6 @@ struct SessionDetailView: View {
         let segs = session.segments.sorted { $0.startTime < $1.startTime }
         if segs.count >= 5, session.durationSeconds > 10 {
             let data = pacingBuckets(segs: segs, duration: session.durationSeconds)
-            let numBuckets = data.count
             let maxW = max(1, data.map(\.words).max() ?? 1)
             if maxW > 0 {
                 VStack(alignment: .leading, spacing: 10) {

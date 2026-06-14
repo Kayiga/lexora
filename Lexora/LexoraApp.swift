@@ -74,7 +74,8 @@ final class LexoraAppDelegate: NSObject, UIApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.registerQuickActions()
+            // Hop to the main actor explicitly — the observer block is nonisolated.
+            Task { @MainActor in self?.registerQuickActions() }
         }
         return true
     }

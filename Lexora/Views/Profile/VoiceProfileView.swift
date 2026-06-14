@@ -598,6 +598,10 @@ struct VoiceProfileView: View {
 
     private func importFromContacts() {
         let store = CNContactStore()
+        // Capture MainActor state HERE (we're on the main actor) so the background
+        // completion closure below never references appState.profile across the
+        // isolation boundary — that crossing crashes on macOS 26 beta.
+        let existingTerms = Set(appState.profile.customVocabulary.map { $0.term.lowercased() })
         store.requestAccess(for: .contacts) { granted, error in
             // CNContactStore callbacks fire on a background queue. Hop to the main
             // actor via Task { @MainActor in } (not DispatchQueue.main.async) so the
@@ -614,7 +618,6 @@ struct VoiceProfileView: View {
                         CNContactNicknameKey, CNContactOrganizationNameKey] as [CNKeyDescriptor]
             let request = CNContactFetchRequest(keysToFetch: keys)
             var importedNames: [String] = []
-            let existingTerms = Set(appState.profile.customVocabulary.map { $0.term.lowercased() })
 
             do {
                 try store.enumerateContacts(with: request) { contact, _ in
@@ -670,7 +673,7 @@ struct VoiceProfileView: View {
             let source    = entry.source.rawValue
             let usage     = String(entry.usageCount)
             let score     = String(format: "%.2f", entry.relevanceScore)
-            let language  = entry.language ?? ""
+            let language  = entry.language
             let addedStr  = ISO8601DateFormatter().string(from: entry.addedAt)
             // CSV-escape a field: wrap in quotes if it contains commas/quotes
             func esc(_ s: String) -> String {

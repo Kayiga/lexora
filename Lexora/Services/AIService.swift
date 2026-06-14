@@ -10,7 +10,9 @@ final class AIService {
 
     // MARK: - Keychain
 
-    private static let keychainAccount = "com.yiga.Lexora.openAIKey"
+    // nonisolated so the Keychain helpers (which run on any thread) can read it
+    // without crossing the @MainActor boundary — avoids the macOS 26 executor crash.
+    nonisolated private static let keychainAccount = "com.yiga.Lexora.openAIKey"
 
     /// Whether a key is currently stored in the Keychain.
     var hasAPIKey: Bool { nonisolated_loadKey() != nil }
