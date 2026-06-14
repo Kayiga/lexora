@@ -61,14 +61,14 @@
 
 ### Step 4 — CI Secrets (10 min)
 ```bash
-cd "/Users/yiga/Documents/Personal/The World of AI/Claude WorkSpace/Outputs/LinguaFlow"
+cd "/Users/yiga/Documents/Personal/The World of AI/Claude WorkSpace/Outputs/Lexora"
 ./.github/setup_ci_secrets.sh
 ```
 The script walks you through each of the 8 secrets step by step. 3 are pre-filled (team ID + 2 passwords).
 
 ### Step 5 — Trigger first TestFlight build
 ```bash
-cd "/Users/yiga/Documents/Personal/The World of AI/Claude WorkSpace/Outputs/LinguaFlow"
+cd "/Users/yiga/Documents/Personal/The World of AI/Claude WorkSpace/Outputs/Lexora"
 git tag v1.0.1 && git push origin v1.0.1
 ```
 CI builds → archives → uploads to TestFlight. Watch at: **https://github.com/Kayiga/lexora/actions**
