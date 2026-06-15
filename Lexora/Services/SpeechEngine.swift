@@ -96,7 +96,7 @@ final class SpeechEngine {
                 let optionsValue = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume), isPaused {
-                    try? resumeListening()
+                    Task { try? await self.resumeListening() }
                 }
             @unknown default:
                 break
@@ -161,7 +161,7 @@ final class SpeechEngine {
         language: String? = nil,
         contextProfileID: UUID? = nil,
         appBundleID: String? = nil
-    ) throws {
+    ) async throws {
         // Always query the live status — permissionStatus may be stale if permission
         // was granted from outside the app (e.g. iOS Settings or Onboarding flow).
         let liveStatus = SFSpeechRecognizer.authorizationStatus()
@@ -182,7 +182,7 @@ final class SpeechEngine {
         currentTranscript = ""
         wordTimestamps = []
 
-        try startAudioEngine()
+        try await startAudioEngine()
         isListening = true
         if silenceAutoStopEnabled { startSilenceTimer() }
     }
@@ -206,10 +206,9 @@ final class SpeechEngine {
         recognitionRequest = nil
         recognitionTask = nil
 
-#if !targetEnvironment(macCatalyst)
-        // Deactivate audio session so other apps can resume playback.
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-#endif
+        // Deactivate the audio session off the main thread (otherwise the
+        // blocking setActive(false) freezes the UI — this was the stop-hang).
+        deactivateRecordingSession()
 
         finaliseSession()
     }
@@ -225,10 +224,10 @@ final class SpeechEngine {
     }
 
     /// Resumes from a paused state by restarting the audio engine.
-    func resumeListening() throws {
+    func resumeListening() async throws {
         guard isPaused else { return }
         // Re-connect the tap and restart
-        try startAudioEngine()
+        try await startAudioEngine()
         isPaused = false
         isListening = true
     }
@@ -245,15 +244,35 @@ final class SpeechEngine {
         self.recognizer = recognizer
     }
 
-    private func startAudioEngine() throws {
-        // AVAudioSession category/active calls are iOS-only.
-        // On Mac Catalyst the framework is a stub and setCategory throws runtime
-        // exceptions that bypass Swift's try/catch — skip entirely on Mac.
+    // AVAudioSession.setActive / setCategory are BLOCKING calls. On the main
+    // thread they freeze the UI (Xcode flags an "AVAudioSession Hang Risk").
+    // Run them off the main actor via Task.detached. Activation is awaited so the
+    // engine still starts only after the session is ready; the main thread is
+    // never blocked (the awaiting actor task just suspends).
+    private nonisolated func activateRecordingSession() async throws {
 #if !targetEnvironment(macCatalyst)
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: .duckOthers)
-        try session.setActive(true, options: .notifyOthersOnDeactivation)
+        try await Task.detached(priority: .userInitiated) {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        }.value
 #endif
+    }
+
+    /// Deactivates the audio session off the main thread (fire-and-forget — nothing
+    /// waits on it, and on the main thread it can hang the UI for hundreds of ms).
+    private nonisolated func deactivateRecordingSession() {
+#if !targetEnvironment(macCatalyst)
+        Task.detached(priority: .utility) {
+            try? AVAudioSession.sharedInstance()
+                .setActive(false, options: .notifyOthersOnDeactivation)
+        }
+#endif
+    }
+
+    private func startAudioEngine() async throws {
+        // Configure + activate the audio session off the main thread.
+        try await activateRecordingSession()
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let request = recognitionRequest else { throw SpeechError.engineFailed }

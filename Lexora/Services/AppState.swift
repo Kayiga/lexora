@@ -171,14 +171,14 @@ final class AppState {
 
     // MARK: - Actions
 
-    func startRecording(language: String? = nil, contextProfileID: UUID? = nil, templateTags: [String] = []) throws {
+    func startRecording(language: String? = nil, contextProfileID: UUID? = nil, templateTags: [String] = []) async throws {
         pendingTemplateTags = templateTags
         // Apply silence auto-stop settings from the user profile before starting.
         speechEngine.configureSilenceAutoStop(
             enabled: profile.silenceAutoStopEnabled,
             timeout: profile.silenceTimeoutSeconds
         )
-        try speechEngine.startListening(language: language, contextProfileID: contextProfileID)
+        try await speechEngine.startListening(language: language, contextProfileID: contextProfileID)
         // Kick off Live Activity on devices that support it.
         liveActivity.start(sessionID: UUID())
         // Push a state update every second while recording.
@@ -217,12 +217,14 @@ final class AppState {
     }
 
     func resumeRecording() {
-        try? speechEngine.resumeListening()
-        let wordCount = speechEngine.currentTranscript
-            .split(whereSeparator: { $0.isWhitespace }).count
-        liveActivity.update(wordCount: wordCount,
-                            detectedLanguage: speechEngine.detectedLanguage,
-                            isListening: true)
+        Task { @MainActor in
+            try? await speechEngine.resumeListening()
+            let wordCount = speechEngine.currentTranscript
+                .split(whereSeparator: { $0.isWhitespace }).count
+            liveActivity.update(wordCount: wordCount,
+                                detectedLanguage: speechEngine.detectedLanguage,
+                                isListening: true)
+        }
     }
 
     func recordCorrection(original: String, corrected: String, sessionID: UUID) {

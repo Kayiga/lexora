@@ -1260,16 +1260,18 @@ struct RecordingView: View {
 
         guard recordingCountdownEnabled else {
             // Instant start when countdown is disabled
-            do {
-                try appState.startRecording(
-                    language: lockedLanguage,
-                    contextProfileID: selectedContextProfileID,
-                    templateTags: activatedTemplateTags
-                )
-                if appState.profile.hapticFeedbackEnabled { HapticManager.recordingStarted() }
-            } catch {
-                if appState.profile.hapticFeedbackEnabled { HapticManager.error() }
-                showPermissionAlert = true
+            Task { @MainActor in
+                do {
+                    try await appState.startRecording(
+                        language: lockedLanguage,
+                        contextProfileID: selectedContextProfileID,
+                        templateTags: activatedTemplateTags
+                    )
+                    if appState.profile.hapticFeedbackEnabled { HapticManager.recordingStarted() }
+                } catch {
+                    if appState.profile.hapticFeedbackEnabled { HapticManager.error() }
+                    showPermissionAlert = true
+                }
             }
             return
         }
@@ -1285,7 +1287,7 @@ struct RecordingView: View {
             }
             withAnimation(.easeOut(duration: 0.2)) { countdownValue = nil }
             do {
-                try appState.startRecording(
+                try await appState.startRecording(
                     language: lockedLanguage,
                     contextProfileID: selectedContextProfileID,
                     templateTags: activatedTemplateTags

@@ -40,7 +40,7 @@ final class LiveActivityService {
 
     func update(wordCount: Int, detectedLanguage: String, isListening: Bool) {
 #if !targetEnvironment(macCatalyst)
-        guard let activity, let start = sessionStart else { return }
+        guard activity != nil, let start = sessionStart else { return }
         let elapsed = Int(Date().timeIntervalSince(start))
         let state = RecordingActivityAttributes.ContentState(
             wordCount: wordCount, elapsedSeconds: elapsed,
@@ -54,7 +54,7 @@ final class LiveActivityService {
 
     func end(wordCount: Int, detectedLanguage: String) {
 #if !targetEnvironment(macCatalyst)
-        guard let activity, let start = sessionStart else { return }
+        guard activity != nil, let start = sessionStart else { return }
         let elapsed = Int(Date().timeIntervalSince(start))
         let state = RecordingActivityAttributes.ContentState(
             wordCount: wordCount, elapsedSeconds: elapsed,
