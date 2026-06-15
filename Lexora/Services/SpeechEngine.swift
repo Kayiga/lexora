@@ -57,6 +57,15 @@ final class SpeechEngine {
     private var lastSignificantSoundDate: Date?
     private var silenceCheckTask: Task<Void, Never>?
 
+    // Long-dictation continuity: SFSpeechRecognizer caps a single request at
+    // ~1 minute and often stops WITHOUT a final/error callback. We proactively
+    // rotate the request before that cap so dictation continues indefinitely.
+    private var rotationTask: Task<Void, Never>?
+    private let rotationInterval: TimeInterval = 45
+    /// The current request's latest hypothesis (committed on rotation so nothing is lost).
+    @ObservationIgnored private var latestSegmentText = ""
+    @ObservationIgnored private var latestSegments: [TranscriptSegment] = []
+
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
         self.learningEngine = learningEngine
@@ -149,6 +158,43 @@ final class SpeechEngine {
         }
     }
 
+    // MARK: - Long-dictation rotation
+
+    /// Restarts the recognition request every `rotationInterval` seconds so we
+    /// stay under SFSpeechRecognizer's ~1-minute single-request cap (which
+    /// otherwise silently stops transcription mid-dictation, ~75 words in).
+    private func startRotationTimer() {
+        rotationTask?.cancel()
+        rotationTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(self?.rotationInterval ?? 45))
+                guard let self, isListening, !Task.isCancelled else { break }
+                rotateRecognitionRequest()
+            }
+        }
+    }
+
+    /// Commits the current request's text, then starts a fresh request on the
+    /// same audio stream — so long dictations continue past the recogniser's cap
+    /// without losing words.
+    private func rotateRecognitionRequest() {
+        guard isListening else { return }
+        // Preserve everything transcribed so far in this request.
+        if !latestSegmentText.isEmpty {
+            committedTranscript = committedTranscript.isEmpty
+                ? latestSegmentText
+                : committedTranscript + " " + latestSegmentText
+            committedSegments += latestSegments
+        }
+        latestSegmentText = ""
+        latestSegments = []
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionRequest = nil
+        recognitionTask = nil
+        makeRecognitionRequestAndTask()
+    }
+
     // MARK: - Permissions
 
     func requestPermissions() {
@@ -190,10 +236,13 @@ final class SpeechEngine {
         currentTranscript = ""
         committedTranscript = ""
         committedSegments = []
+        latestSegmentText = ""
+        latestSegments = []
         wordTimestamps = []
 
         try await startAudioEngine()
         isListening = true
+        startRotationTimer()
         if silenceAutoStopEnabled { startSilenceTimer() }
     }
 
@@ -209,6 +258,8 @@ final class SpeechEngine {
 
         silenceCheckTask?.cancel()
         silenceCheckTask = nil
+        rotationTask?.cancel()
+        rotationTask = nil
         if audioEngine.isRunning { audioEngine.stop() }
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
@@ -227,6 +278,8 @@ final class SpeechEngine {
     /// The transcript accumulated so far is preserved in `currentTranscript`.
     func pauseListening() {
         guard isListening, !isPaused else { return }
+        rotationTask?.cancel()
+        rotationTask = nil
         audioEngine.pause()
         recognitionRequest?.endAudio()
         isPaused = true
@@ -240,6 +293,7 @@ final class SpeechEngine {
         try await startAudioEngine()
         isPaused = false
         isListening = true
+        startRotationTimer()
     }
 
     // MARK: - Configuration
@@ -296,33 +350,6 @@ final class SpeechEngine {
         }
     }
 
-    @ObservationIgnored private var lastRestartTime: CFAbsoluteTime = 0
-
-    /// Commits the current segment and spins up a new request so dictation
-    /// continues seamlessly (past the recogniser's ~1-minute single-request limit).
-    /// Rate-limited so a silent/empty finalisation can't trigger a tight restart loop.
-    private func restartRecognitionRequest() {
-        guard isListening else { return }
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        recognitionRequest = nil
-        recognitionTask = nil
-
-        let now = CFAbsoluteTimeGetCurrent()
-        let sinceLast = now - lastRestartTime
-        lastRestartTime = now
-        if sinceLast < 0.4 {
-            // Restarting too fast (likely silent finalisations) — back off briefly.
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(400))
-                guard let self, isListening, recognitionTask == nil else { return }
-                makeRecognitionRequestAndTask()
-            }
-        } else {
-            makeRecognitionRequestAndTask()
-        }
-    }
-
     private func startAudioEngine() async throws {
         // Configure + activate the audio session off the main thread.
         try await activateRecordingSession()
@@ -365,9 +392,13 @@ final class SpeechEngine {
         // commit nothing extra and spin up a fresh request to keep transcribing.
         guard let result = result else {
             if error != nil {
+                // Task ended (transient failure or single-request cap). Rotate to a
+                // fresh request after a short delay; skip if a timer rotation has
+                // already spun one up (recognitionTask != nil) to avoid tight loops.
                 Task { @MainActor [weak self] in
-                    guard let self, isListening else { return }
-                    restartRecognitionRequest()
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard let self, isListening, recognitionTask == nil else { return }
+                    rotateRecognitionRequest()
                 }
             }
             return
@@ -430,6 +461,11 @@ final class SpeechEngine {
                 )
             }
 
+            // Remember this request's latest hypothesis so a rotation (timer,
+            // final, or error) can commit it without losing words.
+            latestSegmentText = segmentText
+            latestSegments = theseSegments
+
             // Keep the in-progress session in sync with what's actually shown
             // (currentTranscript = the monotonic display), so a stop mid-sentence
             // saves the full text, not a transient shrunk hypothesis.
@@ -440,11 +476,9 @@ final class SpeechEngine {
             currentSession?.segments = committedSegments + theseSegments
 
             if isFinal {
-                // Commit this segment and restart so dictation continues past the
-                // recogniser's single-request limit without losing what was said.
-                committedTranscript = live
-                committedSegments += theseSegments
-                restartRecognitionRequest()
+                // Final result for this request — commit and start a fresh one so
+                // dictation continues past the recogniser's single-request limit.
+                rotateRecognitionRequest()
             }
         }
     }
