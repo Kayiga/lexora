@@ -624,7 +624,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LexoraKeyboard/Info.plist;
@@ -634,7 +634,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -678,7 +678,7 @@
 				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				ENABLE_PREVIEWS = YES;
@@ -690,7 +690,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -729,7 +729,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Lexora/Lexora-LocalDev.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				ENABLE_PREVIEWS = YES;
@@ -741,7 +741,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -758,7 +758,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "LexoraKeyboard/LexoraKeyboard-LocalDev.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = LexoraKeyboard/Info.plist;
@@ -768,7 +768,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora.Keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
