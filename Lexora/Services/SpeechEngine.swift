@@ -404,9 +404,17 @@ final class SpeechEngine {
                 ? learningEngine.applySmartCorrections(to: live)
                 : live
 
-            currentTranscript = corrected
-            currentConfidence = confidence
-            onTranscriptUpdate?(corrected, confidence)
+            // Monotonic display: SFSpeechRecognizer revises/reformats its live
+            // hypothesis mid-sentence (e.g. spoken "one… two…" → "1.… 2.…") and
+            // can momentarily emit a SHORTER string — that's the "purge" where
+            // dictated text vanishes. Only let the visible transcript shrink when
+            // this is the recogniser's FINAL, authoritative result; otherwise keep
+            // the longest version seen so far so words never disappear mid-sentence.
+            if isFinal || corrected.count >= currentTranscript.count {
+                currentTranscript = corrected
+                currentConfidence = confidence
+                onTranscriptUpdate?(corrected, confidence)
+            }
 
             // Build this request's segment-confidence rows.
             let fillerSet: Set<String> = ["um", "uh", "like", "you know", "i mean",
@@ -422,9 +430,11 @@ final class SpeechEngine {
                 )
             }
 
-            // Keep the in-progress session up to date so a clean stop has the latest.
+            // Keep the in-progress session in sync with what's actually shown
+            // (currentTranscript = the monotonic display), so a stop mid-sentence
+            // saves the full text, not a transient shrunk hypothesis.
             currentSession?.rawTranscript = live
-            currentSession?.finalTranscript = corrected
+            currentSession?.finalTranscript = currentTranscript
             currentSession?.confidenceAverage = confidence
             currentSession?.primaryLanguage = detectedLanguage
             currentSession?.segments = committedSegments + theseSegments
