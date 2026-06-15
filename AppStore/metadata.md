@@ -14,7 +14,7 @@ All character counts are verified against Apple's limits.
 | **Category (Primary)** | Productivity |
 | **Category (Secondary)** | Utilities |
 | **Content Rating** | 4+ |
-| **Price** | Free — 60-day full trial, then $4.99 one-time (Premium IAP) |
+| **Price** | Free — all features included, no in-app purchases |
 | **Bundle ID** | com.yiga.Lexora |
 | **SKU** | LEXORA-1 |
 
@@ -43,9 +43,9 @@ Unlike basic voice-to-text apps, Lexora gets smarter every time you use it. Ever
 • Keyboard extension: dictate into any text field, system-wide
 • Siri Shortcuts: start recordings, query word counts, and more
 
-**Lexora Premium — one-time purchase**
+**Also included — everything, free**
 
-• Unlimited session history (free trial includes everything for 60 days)
+• Unlimited session history
 • AI Insights: GPT-4o mini generates abstractive summaries, extracts action items, and suggests follow-up questions — using your own OpenAI key, stored securely in the iOS Keychain
 • Reading Mode: distraction-free transcript reader with adjustable font size and a live progress bar
 • Export as HTML webpage (dark-mode aware, print-ready, shareable)
@@ -82,7 +82,7 @@ Welcome to Lexora! First release on the App Store.
 
 Lexora learns how you speak — your vocabulary, your accent, your pacing — and gets more accurate with every recording. Dictate in any language, edit transcripts, export to PDF or SRT, sync to iCloud, and dictate system-wide with the included keyboard extension.
 
-Optional: add your OpenAI API key in Settings to unlock AI-powered summaries and action-item extraction (Lexora Premium required).
+Optional: add your OpenAI API key in Settings to enable AI-powered summaries and action-item extraction.
 
 ---
 
@@ -133,7 +133,7 @@ https://kayiga.github.io/lexora/privacy.html
 
 **Speech recognition permission:** Required for on-device transcription. Grant when prompted.
 
-**Premium IAP (com.yiga.Lexora.premium — $4.99):** Can be tested via the "Restore Purchases" button in Settings. In the Sandbox environment, purchases are free.
+**Pricing:** The app is free with all features unlocked — there are no in-app purchases to test.
 
 **Keyboard extension:** To test LexoraKeyboard, go to Settings → General → Keyboard → Keyboards → Add New Keyboard → Lexora → enable Allow Full Access. Then open any text field, tap the globe key, select Lexora, and tap the microphone button.
 
@@ -159,20 +159,18 @@ Screenshots depict (in order):
 2. Recording — live waveform, real-time transcript, word count HUD
 3. AI Insights — summary, action items, follow-up suggestions
 4. Analytics — language chart, words-per-minute graph
-5. Premium paywall — feature grid, one-time price
+5. Feature showcase — everything included, free
 
 ---
 
 ## In-App Purchase
 
-| Field | Value |
-|---|---|
-| **Reference Name** | Lexora Premium |
-| **Product ID** | com.yiga.Lexora.premium |
-| **Type** | Non-Consumable |
-| **Price** | Tier 5 — $4.99 |
-| **Display Name** | Lexora Premium |
-| **Description** | Unlimited history, AI insights, reading mode, HTML & Obsidian export, and full analytics. One-time purchase. |
+None. The app is free with every feature unlocked.
+
+> Monetization is currently suspended (`StoreService.monetizationEnabled = false`).
+> The StoreKit product `com.yiga.Lexora.premium` (Non-Consumable, was Tier 5 / $4.99)
+> remains in code and can be re-enabled later by flipping that flag and creating
+> the IAP in App Store Connect.
 
 ---
 

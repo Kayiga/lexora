@@ -439,12 +439,12 @@ private let premiumFeatures: [PremiumFeature] = [
 private struct Screenshot5_Premium: View {
     var body: some View {
         ScreenshotFrame(
-            headline: "Everything, unlocked forever",
-            subhead: "One-time purchase — no subscription, ever",
+            headline: "Everything included, free",
+            subhead: "Every feature unlocked — no purchases, no subscription",
             gradient: [Color(red: 0.45, green: 0.10, blue: 0.65), brandMid]
         ) {
             VStack(spacing: 0) {
-                fakeNavBar("Lexora Premium")
+                fakeNavBar("All Features")
                 ScrollView {
                     VStack(spacing: 16) {
                         crownIcon
@@ -499,7 +499,7 @@ private struct Screenshot5_Premium: View {
     }
 
     private var ctaButton: some View {
-        Text("Upgrade for $4.99")
+        Text("Start dictating — it's all free")
             .font(.headline)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
