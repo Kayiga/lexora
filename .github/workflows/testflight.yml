@@ -58,6 +58,22 @@ jobs:
           -quiet
         echo "Build succeeded"
 
+    - name: Run unit tests (iOS Simulator)
+      run: |
+        # Pick whatever iPhone simulator the runner provides (avoids pinning a
+        # specific device/OS that may not exist on the image).
+        DEVICE=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+( Pro)?' | head -1)
+        echo "Testing on: ${DEVICE:-iPhone 16}"
+        xcodebuild test \
+          -project "$PROJECT" \
+          -scheme  "$SCHEME" \
+          -destination "platform=iOS Simulator,name=${DEVICE:-iPhone 16}" \
+          -configuration Debug \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          -quiet
+        echo "Tests passed"
+
 # ── Job 2: Archive + TestFlight — v* tags only ────────────────────────────────
   release:
     name: Archive → TestFlight
