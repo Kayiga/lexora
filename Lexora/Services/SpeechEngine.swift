@@ -62,9 +62,18 @@ final class SpeechEngine {
     // rotate the request before that cap so dictation continues indefinitely.
     private var rotationTask: Task<Void, Never>?
     private let rotationInterval: TimeInterval = 45
-    /// The current request's latest hypothesis (committed on rotation so nothing is lost).
+    /// The current request's latest hypothesis (used as a fallback when draining).
     @ObservationIgnored private var latestSegmentText = ""
     @ObservationIgnored private var latestSegments: [TranscriptSegment] = []
+
+    // Gapless rotation: the OUTGOING request is drained (endAudio, not cancelled)
+    // so its final result — including the half-second tail spoken right before the
+    // handoff — gets committed, while a NEW request immediately takes over the
+    // live audio. Without this, those tail words were dropped at every rotation.
+    @ObservationIgnored private var drainingRequestID: UUID?
+    @ObservationIgnored private var drainingTask: SFSpeechRecognitionTask?
+    @ObservationIgnored private var drainingFallbackText = ""
+    @ObservationIgnored private var drainingFallbackSegments: [TranscriptSegment] = []
 
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
@@ -174,25 +183,63 @@ final class SpeechEngine {
         }
     }
 
-    /// Commits the current request's text, then starts a fresh request on the
-    /// same audio stream — so long dictations continue past the recogniser's cap
-    /// without losing words.
+    /// Gapless rotation. Drains the current request (endAudio, NOT cancel) so its
+    /// final result — including the tail spoken just before the handoff — can be
+    /// committed, while a fresh request immediately takes over the live audio.
     private func rotateRecognitionRequest() {
         guard isListening else { return }
-        // Preserve everything transcribed so far in this request.
-        if !latestSegmentText.isEmpty {
-            committedTranscript = committedTranscript.isEmpty
-                ? latestSegmentText
-                : committedTranscript + " " + latestSegmentText
-            committedSegments += latestSegments
+        // Only one drain at a time. If a previous drain is still pending, commit
+        // its fallback now so we don't lose it.
+        if drainingRequestID != nil {
+            commitDraining(text: drainingFallbackText, segments: drainingFallbackSegments)
         }
-        latestSegmentText = ""
-        latestSegments = []
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        recognitionRequest = nil
-        recognitionTask = nil
-        makeRecognitionRequestAndTask()
+        if let oldReq = recognitionRequest, let task = recognitionTask {
+            drainingRequestID = currentRequestID
+            drainingTask = task
+            drainingFallbackText = latestSegmentText      // fallback if no final arrives
+            drainingFallbackSegments = latestSegments
+            latestSegmentText = ""
+            latestSegments = []
+            // Switch the tap to a fresh request FIRST (so no audio buffer lands on
+            // the about-to-end request), THEN finalize the old one to capture its
+            // tail. This makes the handoff gapless.
+            makeRecognitionRequestAndTask()
+            oldReq.endAudio()
+        } else {
+            latestSegmentText = ""
+            latestSegments = []
+            makeRecognitionRequestAndTask()
+        }
+    }
+
+    /// Appends a drained request's finalized text to the committed transcript.
+    private func commitDraining(text: String, segments: [TranscriptSegment]) {
+        if !text.isEmpty {
+            committedTranscript = committedTranscript.isEmpty
+                ? text
+                : committedTranscript + " " + text
+            committedSegments += segments
+        }
+        drainingRequestID = nil
+        drainingTask = nil
+        drainingFallbackText = ""
+        drainingFallbackSegments = []
+    }
+
+    /// Maps recogniser segments to our model rows.
+    private func makeSegments(_ sfSegments: [SFTranscriptionSegment]) -> [TranscriptSegment] {
+        let fillerSet: Set<String> = ["um", "uh", "like", "you know", "i mean",
+                                      "basically", "literally", "actually", "so"]
+        return sfSegments.map { seg in
+            TranscriptSegment(
+                text: seg.substring,
+                startTime: seg.timestamp,
+                endTime: seg.timestamp + seg.duration,
+                confidence: Double(seg.confidence),
+                language: self.detectedLanguage,
+                isFiller: fillerSet.contains(seg.substring.lowercased())
+            )
+        }
     }
 
     // MARK: - Permissions
@@ -238,6 +285,10 @@ final class SpeechEngine {
         committedSegments = []
         latestSegmentText = ""
         latestSegments = []
+        drainingRequestID = nil
+        drainingTask = nil
+        drainingFallbackText = ""
+        drainingFallbackSegments = []
         wordTimestamps = []
 
         try await startAudioEngine()
@@ -266,6 +317,10 @@ final class SpeechEngine {
         recognitionTask?.cancel()
         recognitionRequest = nil
         recognitionTask = nil
+        // Retire any in-flight draining task too.
+        drainingTask?.cancel()
+        drainingTask = nil
+        drainingRequestID = nil
 
         // Deactivate the audio session off the main thread (otherwise the
         // blocking setActive(false) freezes the UI — this was the stop-hang).
@@ -394,48 +449,48 @@ final class SpeechEngine {
     // MARK: - Result Processing
 
     private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?, requestID: UUID) {
-        // Ignore callbacks from a previous (rotated/cancelled) request. Only the
-        // current request drives the display and rotation — a stale task's final
-        // result must NOT re-trigger rotation or it churns and drops words.
-        guard requestID == currentRequestID else { return }
-
-        // A nil result with an error means the recognition task ended (transient
-        // failure, or it hit its single-request limit). If we're still recording,
-        // commit nothing extra and spin up a fresh request to keep transcribing.
-        guard let result = result else {
-            if error != nil {
-                // Task ended (transient failure or single-request cap). Rotate to a
-                // fresh request after a short delay; skip if a timer rotation has
-                // already spun one up (currentRequestID changed) to avoid tight loops.
-                let endedID = requestID
-                Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .milliseconds(300))
-                    guard let self, isListening, currentRequestID == endedID else { return }
-                    rotateRecognitionRequest()
-                }
-            }
-            return
-        }
-
-        let segmentText = result.bestTranscription.formattedString
-        let sfSegments = result.bestTranscription.segments
+        // Snapshot result data, then hop to the main actor for all state changes.
+        let segmentText = result?.bestTranscription.formattedString
+        let sfSegments = result?.bestTranscription.segments ?? []
+        let isFinal = result?.isFinal ?? false
+        let endedWithError = (result == nil && error != nil)
         let confidence: Double = sfSegments.isEmpty ? 0 :
             Double(sfSegments.map { $0.confidence }.reduce(0, +)) / Double(sfSegments.count)
-        let isFinal = result.isFinal
 
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // Ignore results that arrive after stop/while paused.
-            guard isListening else { return }
 
-            // Live transcript = everything committed so far + this request's text.
-            // This is what makes the transcript only ever grow — a new request
-            // (restart) starts segmentText fresh but committedTranscript is preserved.
+            // ── Draining (outgoing) request: commit its finalized tail, then retire.
+            if requestID == drainingRequestID {
+                if isFinal, let text = segmentText {
+                    commitDraining(text: text, segments: makeSegments(sfSegments))
+                } else if endedWithError {
+                    // Ended without a final — fall back to its last partial so its
+                    // text is never lost.
+                    commitDraining(text: drainingFallbackText, segments: drainingFallbackSegments)
+                }
+                return
+            }
+
+            // ── Only the CURRENT request drives the display and rotation.
+            guard requestID == currentRequestID, isListening else { return }
+
+            if endedWithError {
+                // Task ended (transient failure / single-request cap). Rotate after a
+                // short delay unless a timer rotation already replaced it.
+                let endedID = requestID
+                try? await Task.sleep(for: .milliseconds(300))
+                guard isListening, currentRequestID == endedID else { return }
+                rotateRecognitionRequest()
+                return
+            }
+            guard let segmentText else { return }
+
+            // Live transcript = committed (drained) text + this request's window.
             let live = committedTranscript.isEmpty
                 ? segmentText
                 : (segmentText.isEmpty ? committedTranscript : committedTranscript + " " + segmentText)
 
-            // Language detection on the live transcript (label + primary language only).
             let langResult = languageIntelligence.detect(text: live)
             if langResult.language != detectedLanguage && langResult.confidence > 0.7 {
                 detectedLanguage = langResult.language
@@ -449,39 +504,21 @@ final class SpeechEngine {
                 : live
 
             // Monotonic display: SFSpeechRecognizer revises/reformats its live
-            // hypothesis mid-sentence (e.g. spoken "one… two…" → "1.… 2.…") and
-            // can momentarily emit a SHORTER string — that's the "purge" where
-            // dictated text vanishes. Only let the visible transcript shrink when
-            // this is the recogniser's FINAL, authoritative result; otherwise keep
-            // the longest version seen so far so words never disappear mid-sentence.
+            // hypothesis mid-sentence (e.g. "one… two…" → "1.… 2.…") and can briefly
+            // emit a SHORTER string. Only allow a shrink on the final result;
+            // otherwise keep the longest text so words never vanish mid-sentence.
             if isFinal || corrected.count >= currentTranscript.count {
                 currentTranscript = corrected
                 currentConfidence = confidence
                 onTranscriptUpdate?(corrected, confidence)
             }
 
-            // Build this request's segment-confidence rows.
-            let fillerSet: Set<String> = ["um", "uh", "like", "you know", "i mean",
-                                          "basically", "literally", "actually", "so"]
-            let theseSegments = sfSegments.map { seg in
-                TranscriptSegment(
-                    text: seg.substring,
-                    startTime: seg.timestamp,
-                    endTime: seg.timestamp + seg.duration,
-                    confidence: Double(seg.confidence),
-                    language: self.detectedLanguage,
-                    isFiller: fillerSet.contains(seg.substring.lowercased())
-                )
-            }
-
-            // Remember this request's latest hypothesis so a rotation (timer,
-            // final, or error) can commit it without losing words.
+            let theseSegments = makeSegments(sfSegments)
             latestSegmentText = segmentText
             latestSegments = theseSegments
 
-            // Keep the in-progress session in sync with what's actually shown
-            // (currentTranscript = the monotonic display), so a stop mid-sentence
-            // saves the full text, not a transient shrunk hypothesis.
+            // Keep the in-progress session in sync with the displayed text so a
+            // stop mid-sentence saves everything (not a transient shrunk hypothesis).
             currentSession?.rawTranscript = live
             currentSession?.finalTranscript = currentTranscript
             currentSession?.confidenceAverage = confidence
@@ -489,8 +526,7 @@ final class SpeechEngine {
             currentSession?.segments = committedSegments + theseSegments
 
             if isFinal {
-                // Final result for this request — commit and start a fresh one so
-                // dictation continues past the recogniser's single-request limit.
+                // Recogniser finalised this request — hand off gaplessly to a new one.
                 rotateRecognitionRequest()
             }
         }
