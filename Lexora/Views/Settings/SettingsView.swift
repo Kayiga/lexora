@@ -40,6 +40,20 @@ struct SettingsView: View {
     private var profile: UserVoiceProfile { appState.profile }
     @AppStorage("accentColorName") private var accentColorName = "default"
 
+    /// When this binary was compiled — read from the executable's modification
+    /// date. Lets you verify the device is running a fresh build (key for the
+    /// recurring "is my phone on the latest code?" question).
+    static let buildDateString: String = {
+        let url = Bundle.main.executableURL
+        let date = (try? url?.resourceValues(forKeys: [.contentModificationDateKey]))?
+            .contentModificationDate
+            ?? (url.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as? Date })
+            ?? Date()
+        let df = DateFormatter()
+        df.dateFormat = "MMM d, HH:mm"
+        return df.string(from: date)
+    }()
+
     var body: some View {
         NavigationStack {
             Form {
@@ -1063,6 +1077,13 @@ struct SettingsView: View {
             LabeledContent("Build") {
                 Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
                     .foregroundStyle(.secondary)
+            }
+            // Compiled-date stamp so you can confirm the device is running a
+            // fresh build (reflects when this binary was actually built).
+            LabeledContent("Built") {
+                Text(Self.buildDateString)
+                    .foregroundStyle(.secondary)
+                    .font(.caption.monospacedDigit())
             }
             NavigationLink {
                 WhatsNewView()

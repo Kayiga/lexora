@@ -194,7 +194,6 @@
 			children = (
 				12D17F463E70267203B5D350 /* LexoraTests.swift */,
 			);
-			name = LexoraTests;
 			path = LexoraTests;
 			sourceTree = "<group>";
 		};
@@ -272,7 +271,7 @@
 			name = LexoraKeyboard;
 			sourceTree = "<group>";
 		};
-		8D3FC6DB5D0827F168A73277 = {
+		8D3FC6DB5D0827F168A73277 /* Lexora */ = {
 			isa = PBXGroup;
 			children = (
 				9DA2D887053037133FF1B2FB /* Lexora */,
@@ -473,7 +472,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1640;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					3D4C91345015A4DD0A099400 = {
 						CreatedOnToolsVersion = 16.4;
@@ -494,7 +493,7 @@
 				en,
 				Base,
 			);
-			mainGroup = 8D3FC6DB5D0827F168A73277;
+			mainGroup = 8D3FC6DB5D0827F168A73277 /* Lexora */;
 			productRefGroup = 1BADDC1D73C1A20F347483E1 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -641,8 +640,8 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -650,7 +649,7 @@
 		127D04BDD1BB9D557816C436 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = LexoraWidget/LexoraWidget-LocalDev.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "LexoraWidget/LexoraWidget-LocalDev.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -666,23 +665,21 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 			};
 			name = Debug;
 		};
 		191734982F22ABEBB64A1AE0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				SUPPORTS_MACCATALYST = YES;
-				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -692,14 +689,16 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -725,15 +724,13 @@
 		72FB3ED29B4639D83EC5DB14 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				SUPPORTS_MACCATALYST = YES;
-				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Lexora/Lexora-LocalDev.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "Lexora/Lexora-LocalDev.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DERIVED_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -743,21 +740,23 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yiga.Lexora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 			};
 			name = Debug;
 		};
 		B2003D2807F7F42E8C3124AD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = LexoraKeyboard/LexoraKeyboard-LocalDev.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "LexoraKeyboard/LexoraKeyboard-LocalDev.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7AZTZL9VAG;
@@ -775,8 +774,8 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 			};
 			name = Debug;
 		};
@@ -818,8 +817,8 @@
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = "2";
+				TARGETED_DEVICE_FAMILY = 1;
+				"TARGETED_DEVICE_FAMILY[sdk=macosx*]" = 2;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
