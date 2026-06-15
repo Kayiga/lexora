@@ -34,6 +34,14 @@ final class SpeechEngine {
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     private var currentSession: TranscriptionSession?
+
+    /// Finalised text from completed recognition segments. The live transcript is
+    /// always committedTranscript + the current request's text, so the transcript
+    /// can only GROW — never reset — even when the recogniser restarts (segment
+    /// boundary, audio-session interruption, or its ~1-minute single-request limit).
+    @ObservationIgnored private var committedTranscript = ""
+    /// All segment-confidence rows collected across recognition requests.
+    @ObservationIgnored private var committedSegments: [TranscriptSegment] = []
     private var languageIntelligence: LanguageIntelligence
     private var learningEngine: LearningEngine
 
@@ -180,6 +188,8 @@ final class SpeechEngine {
         )
         sessionStartTime = Date()
         currentTranscript = ""
+        committedTranscript = ""
+        committedSegments = []
         wordTimestamps = []
 
         try await startAudioEngine()
@@ -270,26 +280,54 @@ final class SpeechEngine {
 #endif
     }
 
+    /// Creates a fresh recognition request + task. Used both at start and when a
+    /// segment finalises / the recogniser hits its single-request limit, so a new
+    /// request can keep transcribing the SAME audio stream without losing prior text.
+    private func makeRecognitionRequestAndTask() {
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        // On-device recognition preferred; fall back to server-based if unsupported.
+        request.requiresOnDeviceRecognition = recognizer?.supportsOnDeviceRecognition ?? false
+        request.shouldReportPartialResults = true
+        request.taskHint = .dictation
+        request.contextualStrings = learningEngine.buildRecognitionHints()
+        recognitionRequest = request
+        recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
+            self?.handleRecognitionResult(result, error: error)
+        }
+    }
+
+    @ObservationIgnored private var lastRestartTime: CFAbsoluteTime = 0
+
+    /// Commits the current segment and spins up a new request so dictation
+    /// continues seamlessly (past the recogniser's ~1-minute single-request limit).
+    /// Rate-limited so a silent/empty finalisation can't trigger a tight restart loop.
+    private func restartRecognitionRequest() {
+        guard isListening else { return }
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionRequest = nil
+        recognitionTask = nil
+
+        let now = CFAbsoluteTimeGetCurrent()
+        let sinceLast = now - lastRestartTime
+        lastRestartTime = now
+        if sinceLast < 0.4 {
+            // Restarting too fast (likely silent finalisations) — back off briefly.
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(400))
+                guard let self, isListening, recognitionTask == nil else { return }
+                makeRecognitionRequestAndTask()
+            }
+        } else {
+            makeRecognitionRequestAndTask()
+        }
+    }
+
     private func startAudioEngine() async throws {
         // Configure + activate the audio session off the main thread.
         try await activateRecordingSession()
 
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let request = recognitionRequest else { throw SpeechError.engineFailed }
-
-        // On-device recognition: preferred for privacy, but may be unavailable on Mac.
-        // Fall back to server-based if the device/OS doesn't support on-device.
-        let supportsOnDevice = recognizer?.supportsOnDeviceRecognition ?? false
-        request.requiresOnDeviceRecognition = supportsOnDevice
-        request.shouldReportPartialResults = true
-        request.taskHint = .dictation
-
-        let hints = learningEngine.buildRecognitionHints()
-        request.contextualStrings = hints
-
-        recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
-            self?.handleRecognitionResult(result, error: error)
-        }
+        makeRecognitionRequestAndTask()
 
         let inputNode = audioEngine.inputNode
 
@@ -322,69 +360,81 @@ final class SpeechEngine {
     // MARK: - Result Processing
 
     private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
+        // A nil result with an error means the recognition task ended (transient
+        // failure, or it hit its single-request limit). If we're still recording,
+        // commit nothing extra and spin up a fresh request to keep transcribing.
         guard let result = result else {
-            if let error = error {
-                Task { @MainActor [weak self] in self?.errorMessage = error.localizedDescription }
+            if error != nil {
+                Task { @MainActor [weak self] in
+                    guard let self, isListening else { return }
+                    restartRecognitionRequest()
+                }
             }
             return
         }
 
-        let transcript = result.bestTranscription.formattedString
-        let segments = result.bestTranscription.segments
-
-        // Calculate average confidence across all segments
-        let confidence: Double = segments.isEmpty ? 0 :
-            Double(segments.map { $0.confidence }.reduce(0, +)) / Double(segments.count)
+        let segmentText = result.bestTranscription.formattedString
+        let sfSegments = result.bestTranscription.segments
+        let confidence: Double = sfSegments.isEmpty ? 0 :
+            Double(sfSegments.map { $0.confidence }.reduce(0, +)) / Double(sfSegments.count)
+        let isFinal = result.isFinal
 
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // Ignore any results that arrive after the user stopped (or while
-            // paused) — processing them would mutate a finalised/!nil session
-            // and can crash on the stop path.
+            // Ignore results that arrive after stop/while paused.
             guard isListening else { return }
 
-            // Run language detection on the growing transcript — for the on-screen
-            // label and the final session's primaryLanguage ONLY. We deliberately
-            // do NOT restart the recogniser mid-session: tearing it down and
-            // calling startListening() reset currentTranscript to "" (purging
-            // everything spoken so far) and caused a crash on stop.
-            let langResult = languageIntelligence.detect(text: transcript)
+            // Live transcript = everything committed so far + this request's text.
+            // This is what makes the transcript only ever grow — a new request
+            // (restart) starts segmentText fresh but committedTranscript is preserved.
+            let live = committedTranscript.isEmpty
+                ? segmentText
+                : (segmentText.isEmpty ? committedTranscript : committedTranscript + " " + segmentText)
+
+            // Language detection on the live transcript (label + primary language only).
+            let langResult = languageIntelligence.detect(text: live)
             if langResult.language != detectedLanguage && langResult.confidence > 0.7 {
                 detectedLanguage = langResult.language
                 onLanguageDetected?(langResult.language, langResult.confidence)
             }
 
-            // Track pace
-            trackPace(segments: segments)
+            trackPace(segments: sfSegments)
 
-            // Apply learned corrections (respects user preference)
             let corrected = learningEngine.profile.smartCorrectionEnabled
-                ? learningEngine.applySmartCorrections(to: transcript)
-                : transcript
+                ? learningEngine.applySmartCorrections(to: live)
+                : live
 
             currentTranscript = corrected
             currentConfidence = confidence
             onTranscriptUpdate?(corrected, confidence)
 
-            if result.isFinal {
-                currentSession?.rawTranscript = transcript
-                currentSession?.finalTranscript = corrected
-                currentSession?.confidenceAverage = confidence
-                currentSession?.primaryLanguage = detectedLanguage
-                // Store per-word segment confidence for the detail view.
-                // SFTranscriptionSegment.timestamp is seconds from the start of the utterance.
-                let fillerSet: Set<String> = ["um", "uh", "like", "you know", "i mean",
-                                              "basically", "literally", "actually", "so"]
-                currentSession?.segments = segments.map { seg in
-                    TranscriptSegment(
-                        text: seg.substring,
-                        startTime: seg.timestamp,
-                        endTime: seg.timestamp + seg.duration,
-                        confidence: Double(seg.confidence),
-                        language: self.detectedLanguage,
-                        isFiller: fillerSet.contains(seg.substring.lowercased())
-                    )
-                }
+            // Build this request's segment-confidence rows.
+            let fillerSet: Set<String> = ["um", "uh", "like", "you know", "i mean",
+                                          "basically", "literally", "actually", "so"]
+            let theseSegments = sfSegments.map { seg in
+                TranscriptSegment(
+                    text: seg.substring,
+                    startTime: seg.timestamp,
+                    endTime: seg.timestamp + seg.duration,
+                    confidence: Double(seg.confidence),
+                    language: self.detectedLanguage,
+                    isFiller: fillerSet.contains(seg.substring.lowercased())
+                )
+            }
+
+            // Keep the in-progress session up to date so a clean stop has the latest.
+            currentSession?.rawTranscript = live
+            currentSession?.finalTranscript = corrected
+            currentSession?.confidenceAverage = confidence
+            currentSession?.primaryLanguage = detectedLanguage
+            currentSession?.segments = committedSegments + theseSegments
+
+            if isFinal {
+                // Commit this segment and restart so dictation continues past the
+                // recogniser's single-request limit without losing what was said.
+                committedTranscript = live
+                committedSegments += theseSegments
+                restartRecognitionRequest()
             }
         }
     }
