@@ -38,5 +38,9 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lexora uses the microphone to transcribe your speech into the text field. Audio is processed on-device.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Lexora uses on-device speech recognition to convert your voice to text as you dictate.</string>
 </dict>
 </plist>

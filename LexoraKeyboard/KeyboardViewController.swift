@@ -135,10 +135,28 @@ class KeyboardViewController: UIInputViewController {
 
     private func startDictation() {
         guard !isListening else { return }
+
+        // Speech recognition must be authorized. A keyboard extension can't reliably
+        // show the system prompt, so if it isn't already authorized (granted via the
+        // main Lexora app's onboarding), request it and tell the user where to grant it.
+        let speechStatus = SFSpeechRecognizer.authorizationStatus()
+        guard speechStatus == .authorized else {
+            if speechStatus == .notDetermined {
+                SFSpeechRecognizer.requestAuthorization { _ in }
+            }
+            currentText = "Open the Lexora app once and allow Microphone + Speech Recognition, then try again."
+            rebuildUI()
+            return
+        }
+
         let locale = Locale(identifier: selectedLanguage)
         speechRecognizer = SFSpeechRecognizer(locale: locale)
                         ?? SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
-        guard let recognizer = speechRecognizer, recognizer.isAvailable else { return }
+        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+            currentText = "Speech recognition isn't available right now."
+            rebuildUI()
+            return
+        }
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -147,7 +165,11 @@ class KeyboardViewController: UIInputViewController {
 
             recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
             guard let request = recognitionRequest else { return }
-            request.requiresOnDeviceRecognition = true
+            // Do NOT force on-device recognition in the keyboard: loading the
+            // on-device model blows past a keyboard extension's ~60 MB memory
+            // budget and gets the extension killed (mic appears to "not launch").
+            // Let the system pick the lighter path.
+            request.requiresOnDeviceRecognition = false
             request.shouldReportPartialResults  = true
             request.taskHint = .dictation
             request.contextualStrings = buildHints()
