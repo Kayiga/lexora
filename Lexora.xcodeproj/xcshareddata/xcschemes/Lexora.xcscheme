@@ -43,7 +43,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8EB4379E0F683781071A76CB"
-               BuildableName = ".xctest"
+               BuildableName = "LexoraTests.xctest"
                BlueprintName = "LexoraTests"
                ReferencedContainer = "container:Lexora.xcodeproj">
             </BuildableReference>
@@ -61,7 +61,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8EB4379E0F683781071A76CB"
-               BuildableName = ".xctest"
+               BuildableName = "LexoraTests.xctest"
                BlueprintName = "LexoraTests"
                ReferencedContainer = "container:Lexora.xcodeproj">
             </BuildableReference>

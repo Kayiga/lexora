@@ -152,16 +152,23 @@ final class TranscriptionSessionTests: XCTestCase {
 
 final class VocabularyEntryTests: XCTestCase {
 
+    private func makeEntry(_ term: String,
+                           phonetic: String? = nil,
+                           category: VocabularyCategory = .technical) -> VocabularyEntry {
+        VocabularyEntry(term: term, phonetic: phonetic, aliases: [],
+                        category: category, language: "en", source: .userAdded)
+    }
+
     func test_vocabulary_entry_initialises() {
-        let entry = VocabularyEntry(term: "SwiftUI", phonetic: nil, category: .technical)
+        let entry = makeEntry("SwiftUI")
         XCTAssertEqual(entry.term, "SwiftUI")
         XCTAssertNil(entry.phonetic)
         XCTAssertEqual(entry.category, .technical)
-        XCTAssertGreaterThan(entry.weight, 0)
+        XCTAssertGreaterThan(entry.relevanceScore, 0)
     }
 
     func test_vocabulary_entry_codable_roundtrip() throws {
-        let entry   = VocabularyEntry(term: "Lexora", phonetic: "lek-SOR-ah", category: .name)
+        let entry   = makeEntry("Lexora", phonetic: "lek-SOR-ah", category: .name)
         let data    = try JSONEncoder().encode(entry)
         let decoded = try JSONDecoder().decode(VocabularyEntry.self, from: data)
         XCTAssertEqual(decoded.term,     entry.term)
@@ -169,12 +176,12 @@ final class VocabularyEntryTests: XCTestCase {
         XCTAssertEqual(decoded.category, entry.category)
     }
 
-    func test_vocabulary_entry_weight_is_positive() {
-        let categories: [VocabularyEntry.Category] = [.name, .technical, .place, .custom]
-        for cat in categories {
-            let entry = VocabularyEntry(term: "Test", phonetic: nil, category: cat)
-            XCTAssertGreaterThan(entry.weight, 0, "Weight should be positive for category \(cat)")
-        }
+    func test_vocabulary_entry_record_usage_increments() {
+        var entry = makeEntry("Test")
+        let before = entry.usageCount
+        entry.recordUsage()
+        XCTAssertEqual(entry.usageCount, before + 1)
+        XCTAssertNotNil(entry.lastUsed)
     }
 }
 
@@ -182,15 +189,20 @@ final class VocabularyEntryTests: XCTestCase {
 
 final class UserVoiceProfileTests: XCTestCase {
 
+    private func makeEntry(_ term: String, category: VocabularyCategory = .technical) -> VocabularyEntry {
+        VocabularyEntry(term: term, phonetic: nil, aliases: [],
+                        category: category, language: "en", source: .userAdded)
+    }
+
     func test_voice_profile_default_values() {
-        let profile = UserVoiceProfile()
-        XCTAssertEqual(profile.detectedPrimaryLanguage, "en-US")
+        let profile = UserVoiceProfile(displayName: "You")
+        XCTAssertEqual(profile.detectedPrimaryLanguage, "en")
         XCTAssertTrue(profile.smartCorrectionEnabled)
-        XCTAssertTrue(profile.vocabulary.isEmpty)
+        XCTAssertTrue(profile.customVocabulary.isEmpty)
     }
 
     func test_voice_profile_codable_roundtrip() throws {
-        var profile = UserVoiceProfile()
+        var profile = UserVoiceProfile(displayName: "You")
         profile.detectedPrimaryLanguage = "fr-FR"
         profile.smartCorrectionEnabled  = false
 
@@ -202,22 +214,19 @@ final class UserVoiceProfileTests: XCTestCase {
     }
 
     func test_voice_profile_vocabulary_survives_roundtrip() throws {
-        var profile = UserVoiceProfile()
-        profile.vocabulary = [
-            VocabularyEntry(term: "iOS",      phonetic: nil, category: .technical),
-            VocabularyEntry(term: "Olakunle", phonetic: nil, category: .name),
-        ]
+        var profile = UserVoiceProfile(displayName: "You")
+        profile.customVocabulary = [makeEntry("iOS"), makeEntry("Olakunle", category: .name)]
 
         let data    = try JSONEncoder().encode(profile)
         let decoded = try JSONDecoder().decode(UserVoiceProfile.self, from: data)
 
-        XCTAssertEqual(decoded.vocabulary.count, 2)
-        XCTAssertEqual(decoded.vocabulary[0].term, "iOS")
-        XCTAssertEqual(decoded.vocabulary[1].term, "Olakunle")
+        XCTAssertEqual(decoded.customVocabulary.count, 2)
+        XCTAssertEqual(decoded.customVocabulary[0].term, "iOS")
+        XCTAssertEqual(decoded.customVocabulary[1].term, "Olakunle")
     }
 
     func test_voice_profile_phoneme_substitutions_survive_roundtrip() throws {
-        var profile = UserVoiceProfile()
+        var profile = UserVoiceProfile(displayName: "You")
         profile.phonemeSubstitutions = ["thier": "their", "recieve": "receive"]
 
         let data    = try JSONEncoder().encode(profile)
