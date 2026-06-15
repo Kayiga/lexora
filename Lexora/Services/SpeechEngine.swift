@@ -411,7 +411,18 @@ final class SpeechEngine {
 
     // MARK: - Signal Level
 
+    /// Last time we dispatched a waveform update to the main actor (racy by design —
+    /// only used to throttle, exact value doesn't matter).
+    @ObservationIgnored private nonisolated(unsafe) var lastSignalDispatch: CFAbsoluteTime = 0
+
     private func updateSignalLevel(buffer: AVAudioPCMBuffer) {
+        // Throttle to ~15 Hz. The audio tap fires ~40×/sec; spawning a main-actor
+        // task per buffer floods the main thread and can freeze the UI on long
+        // recordings. The waveform doesn't need more than ~15 fps.
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastSignalDispatch >= 0.066 else { return }
+        lastSignalDispatch = now
+
         guard let channelData = buffer.floatChannelData?[0] else { return }
         let frames = buffer.frameLength
         var rms: Float = 0
