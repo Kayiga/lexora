@@ -81,12 +81,37 @@ struct SettingsView: View {
 
     // MARK: - Sections
 
+    @ViewBuilder
     private var premiumSection: some View {
         let store = appState.store
         let isPaid     = store.isPremium
         let inTrial    = store.isInFreeTrial
         let daysLeft   = store.trialDaysRemaining
-        return Section {
+
+        if !StoreService.monetizationEnabled {
+            // Monetization suspended — every feature is free. Show a simple note,
+            // no upgrade / trial / restore / unlock-code UI.
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(Color(red: 0.56, green: 0.18, blue: 0.82))
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All features included")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Everything is unlocked and free.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                }
+            } header: {
+                Text("Features")
+            }
+        } else {
+        Section {
             if isPaid {
                 // Paid subscriber
                 HStack(spacing: 12) {
@@ -197,6 +222,7 @@ struct SettingsView: View {
             redeemSheet
                 .environment(appState)
         }
+        }   // end else (monetizationEnabled)
     }
 
     // MARK: - Redeem Sheet

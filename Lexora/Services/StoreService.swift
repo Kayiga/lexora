@@ -16,6 +16,13 @@ final class StoreService {
 
     // MARK: - Constants
 
+    /// MASTER MONETIZATION SWITCH.
+    /// `false` → every premium feature is free and unrestricted, and all
+    ///           price / trial / paywall / unlock-code UI is hidden.
+    /// `true`  → re-enables the 60-day free trial + one-time $4.99 unlock.
+    /// Flip this single flag to turn monetization back on later.
+    static let monetizationEnabled = false
+
     static let premiumProductID  = "com.yiga.Lexora.premium"
     static let trialDurationDays = 60
     private static let installDateKey  = "lexora.installDate"
@@ -76,13 +83,14 @@ final class StoreService {
 
     /// True if the 60-day free trial is currently active.
     var isInFreeTrial: Bool {
+        guard Self.monetizationEnabled else { return false } // no trial when monetization is off
         guard !isPremium else { return false }   // paid users don't need the trial flag
         return trialDaysRemaining > 0
     }
 
     /// Calendar days left in the free trial (0 when expired or paid).
     var trialDaysRemaining: Int {
-        guard !isPremium else { return 0 }
+        guard Self.monetizationEnabled, !isPremium else { return 0 }
         let elapsed = Calendar.current.dateComponents(
             [.day], from: installDate, to: Date()
         ).day ?? Self.trialDurationDays
@@ -90,8 +98,10 @@ final class StoreService {
     }
 
     /// **Single source of truth for feature access.**
-    /// True when the user has paid, is in the 60-day trial, or redeemed a promo code.
+    /// When monetization is suspended, everything is unlocked. Otherwise true
+    /// when the user has paid, is in the 60-day trial, or redeemed a promo code.
     var isUnlocked: Bool {
+        guard Self.monetizationEnabled else { return true } // all features free
         #if DEBUG
         return true   // always unlocked in debug / TestFlight
         #else
