@@ -22,11 +22,18 @@ final class CloudSyncService {
     private let sessionRecordType = "TranscriptionSession"
     private let zoneID = CKRecordZone.ID(zoneName: "LexoraZone", ownerName: CKCurrentUserDefaultName)
 
-    // Lazily resolved. Returns nil if iCloud is unavailable or entitlement is missing.
-    private var privateDB: CKDatabase? {
-        // ubiquityIdentityToken is nil when iCloud is signed out or entitlement is absent
-        guard FileManager.default.ubiquityIdentityToken != nil else { return nil }
+    /// Resolves the CloudKit private database, or nil if iCloud is unavailable.
+    ///
+    /// `FileManager.ubiquityIdentityToken` is a blocking, "relatively expensive"
+    /// call (per Apple) — running it on the main thread stalls/hangs the UI. So
+    /// the availability check runs OFF the main actor; the cheap CKContainer
+    /// object is then created back on the main actor and cached.
+    private func database() async -> CKDatabase? {
         if let db = _privateDB { return db }
+        let iCloudAvailable = await Task.detached(priority: .utility) {
+            FileManager.default.ubiquityIdentityToken != nil
+        }.value
+        guard iCloudAvailable else { return nil }
         let c = CKContainer(identifier: "iCloud.com.yiga.Lexora")
         _container = c
         _privateDB = c.privateCloudDatabase
@@ -41,7 +48,7 @@ final class CloudSyncService {
     // MARK: - Setup
 
     func setupZoneIfNeeded() async {
-        guard let db = privateDB else { return }
+        guard let db = await database() else { return }
         let zone = CKRecordZone(zoneID: zoneID)
         do {
             _ = try await db.save(zone)
@@ -55,7 +62,7 @@ final class CloudSyncService {
     // MARK: - Profile Sync
 
     func uploadProfile(_ profile: UserVoiceProfile) async {
-        guard let db = privateDB else { syncState = .idle; return }
+        guard let db = await database() else { syncState = .idle; return }
         syncState = .syncing
         do {
             let record = try profileToRecord(profile)
@@ -68,7 +75,7 @@ final class CloudSyncService {
     }
 
     func downloadProfile() async -> UserVoiceProfile? {
-        guard let db = privateDB else { syncState = .idle; return nil }
+        guard let db = await database() else { syncState = .idle; return nil }
         syncState = .syncing
         let query = CKQuery(recordType: profileRecordType, predicate: NSPredicate(value: true))
         query.sortDescriptors = [NSSortDescriptor(key: "lastUpdatedAt", ascending: false)]
@@ -92,7 +99,7 @@ final class CloudSyncService {
     // MARK: - Session Sync
 
     func uploadSession(_ session: TranscriptionSession) async {
-        guard let db = privateDB else { return }
+        guard let db = await database() else { return }
         do {
             let record = try sessionToRecord(session)
             _ = try await db.save(record)
@@ -102,7 +109,7 @@ final class CloudSyncService {
     }
 
     func fetchRecentSessions(limit: Int = 50) async -> [TranscriptionSession] {
-        guard let db = privateDB else { return [] }
+        guard let db = await database() else { return [] }
         let query = CKQuery(recordType: sessionRecordType, predicate: NSPredicate(value: true))
         query.sortDescriptors = [NSSortDescriptor(key: "startedAt", ascending: false)]
 
@@ -172,7 +179,7 @@ final class CloudSyncService {
 
     func checkAccountStatus() async -> CKAccountStatus {
         // Trigger the lazy init so _container is populated, then query it.
-        _ = privateDB
+        _ = await database()
         guard let c = _container else { return .noAccount }
         return (try? await c.accountStatus()) ?? .couldNotDetermine
     }
