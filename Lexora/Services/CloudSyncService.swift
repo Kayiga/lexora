@@ -9,6 +9,15 @@ import Observation
 @Observable @MainActor
 final class CloudSyncService {
 
+    /// Master switch for iCloud/CloudKit sync.
+    /// `false` → all sync is a no-op (no CKContainer is ever created). CloudKit
+    ///           requires the paid Apple Developer account: the CloudKit
+    ///           entitlement, a provisioned `iCloud.com.yiga.Lexora` container,
+    ///           and matching signing — none of which exist yet. Until then,
+    ///           touching CKContainer just hangs/errors, so keep this off.
+    /// `true`  → re-enable once the paid account + CloudKit container are set up.
+    static let cloudSyncEnabled = false
+
     var syncState: SyncState = .idle
     var lastSyncDate: Date?
     var pendingChanges: Int = 0
@@ -29,6 +38,7 @@ final class CloudSyncService {
     /// the availability check runs OFF the main actor; the cheap CKContainer
     /// object is then created back on the main actor and cached.
     private func database() async -> CKDatabase? {
+        guard Self.cloudSyncEnabled else { return nil }   // CloudKit not configured yet
         if let db = _privateDB { return db }
         let iCloudAvailable = await Task.detached(priority: .utility) {
             FileManager.default.ubiquityIdentityToken != nil
@@ -178,6 +188,7 @@ final class CloudSyncService {
     // MARK: - Account Status
 
     func checkAccountStatus() async -> CKAccountStatus {
+        guard Self.cloudSyncEnabled else { return .couldNotDetermine }
         // Trigger the lazy init so _container is populated, then query it.
         _ = await database()
         guard let c = _container else { return .noAccount }

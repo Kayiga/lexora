@@ -79,6 +79,10 @@ struct SettingsView: View {
                 // runs on the main actor. Explicit @MainActor in .task {} triggers the
                 // same MainActor.assumeIsolated executor bug on macOS 26 beta.
                 await DailyGoalTip.weeklyUse.donate()
+                guard CloudSyncService.cloudSyncEnabled else {
+                    cloudAccountStatus = "Not available yet"
+                    return
+                }
                 let sync = appState.cloudSync
                 let status = await sync.checkAccountStatus()
                 switch status {
