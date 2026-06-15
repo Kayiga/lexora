@@ -337,6 +337,11 @@ final class SpeechEngine {
     /// Creates a fresh recognition request + task. Used both at start and when a
     /// segment finalises / the recogniser hits its single-request limit, so a new
     /// request can keep transcribing the SAME audio stream without losing prior text.
+    /// Identifies the current recognition request. Callbacks from a previous
+    /// (rotated/cancelled) task carry an older id and are ignored, so a stale
+    /// "final" can't trigger a second rotation (which dropped/duplicated words).
+    @ObservationIgnored private var currentRequestID = UUID()
+
     private func makeRecognitionRequestAndTask() {
         let request = SFSpeechAudioBufferRecognitionRequest()
         // On-device recognition preferred; fall back to server-based if unsupported.
@@ -344,9 +349,11 @@ final class SpeechEngine {
         request.shouldReportPartialResults = true
         request.taskHint = .dictation
         request.contextualStrings = learningEngine.buildRecognitionHints()
+        let id = UUID()
+        currentRequestID = id
         recognitionRequest = request
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
-            self?.handleRecognitionResult(result, error: error)
+            self?.handleRecognitionResult(result, error: error, requestID: id)
         }
     }
 
@@ -386,7 +393,12 @@ final class SpeechEngine {
 
     // MARK: - Result Processing
 
-    private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
+    private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?, requestID: UUID) {
+        // Ignore callbacks from a previous (rotated/cancelled) request. Only the
+        // current request drives the display and rotation — a stale task's final
+        // result must NOT re-trigger rotation or it churns and drops words.
+        guard requestID == currentRequestID else { return }
+
         // A nil result with an error means the recognition task ended (transient
         // failure, or it hit its single-request limit). If we're still recording,
         // commit nothing extra and spin up a fresh request to keep transcribing.
@@ -394,10 +406,11 @@ final class SpeechEngine {
             if error != nil {
                 // Task ended (transient failure or single-request cap). Rotate to a
                 // fresh request after a short delay; skip if a timer rotation has
-                // already spun one up (recognitionTask != nil) to avoid tight loops.
+                // already spun one up (currentRequestID changed) to avoid tight loops.
+                let endedID = requestID
                 Task { @MainActor [weak self] in
                     try? await Task.sleep(for: .milliseconds(300))
-                    guard let self, isListening, recognitionTask == nil else { return }
+                    guard let self, isListening, currentRequestID == endedID else { return }
                     rotateRecognitionRequest()
                 }
             }
