@@ -188,6 +188,7 @@ final class SpeechEngine {
     /// committed, while a fresh request immediately takes over the live audio.
     private func rotateRecognitionRequest() {
         guard isListening else { return }
+        slog("ROTATE (draining \(currentRequestID.uuidString.prefix(4)), tail=\"\(latestSegmentText.suffix(30))\")")
         // Only one drain at a time. If a previous drain is still pending, commit
         // its fallback now so we don't lose it.
         if drainingRequestID != nil {
@@ -274,6 +275,7 @@ final class SpeechEngine {
 
         let targetLanguage = language ?? learningEngine.profile.detectedPrimaryLanguage
         try configureRecognizer(for: targetLanguage)
+        slog("startListening lang=\(targetLanguage) recognizer=\(recognizer?.locale.identifier ?? "nil") available=\(recognizer?.isAvailable ?? false) supportsOnDevice=\(recognizer?.supportsOnDeviceRecognition ?? false) rotation=\(rotationInterval)s")
 
         currentSession = TranscriptionSession(
             contextProfileID: contextProfileID,
@@ -397,6 +399,16 @@ final class SpeechEngine {
     /// "final" can't trigger a second rotation (which dropped/duplicated words).
     @ObservationIgnored private var currentRequestID = UUID()
 
+    /// Toggle for verbose recognition diagnostics. Lines are prefixed "[LexSpeech]"
+    /// so they're easy to filter in the Xcode console. Flip to false to silence.
+    static let debugLogging = true
+    @ObservationIgnored private var loggedEngineInfo = false
+
+    private func slog(_ message: @autoclosure () -> String) {
+        guard Self.debugLogging else { return }
+        print("[LexSpeech] \(message())")
+    }
+
     private func makeRecognitionRequestAndTask() {
         let request = SFSpeechAudioBufferRecognitionRequest()
         // On-device recognition preferred; fall back to server-based if unsupported.
@@ -410,6 +422,10 @@ final class SpeechEngine {
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             self?.handleRecognitionResult(result, error: error, requestID: id)
         }
+        // The single most important diagnostic: did the task actually get created?
+        // If this logs "task=nil" on a rotation, the recognizer is refusing a second
+        // concurrent task — which would silently stop transcription at the handoff.
+        slog("new request \(id.uuidString.prefix(4)) task=\(recognitionTask == nil ? "nil" : "ok") onDevice=\(request.requiresOnDeviceRecognition)")
     }
 
     private func startAudioEngine() async throws {
@@ -463,21 +479,27 @@ final class SpeechEngine {
             // ── Draining (outgoing) request: commit its finalized tail, then retire.
             if requestID == drainingRequestID {
                 if isFinal, let text = segmentText {
+                    slog("drain \(requestID.uuidString.prefix(4)) FINAL commit=\"\(text.suffix(30))\"")
                     commitDraining(text: text, segments: makeSegments(sfSegments))
                 } else if endedWithError {
                     // Ended without a final — fall back to its last partial so its
                     // text is never lost.
+                    slog("drain \(requestID.uuidString.prefix(4)) ERROR=\(error?.localizedDescription ?? "?") fallback=\"\(drainingFallbackText.suffix(30))\"")
                     commitDraining(text: drainingFallbackText, segments: drainingFallbackSegments)
                 }
                 return
             }
 
             // ── Only the CURRENT request drives the display and rotation.
-            guard requestID == currentRequestID, isListening else { return }
+            guard requestID == currentRequestID, isListening else {
+                slog("stale \(requestID.uuidString.prefix(4)) ignored (final=\(isFinal) err=\(endedWithError))")
+                return
+            }
 
             if endedWithError {
                 // Task ended (transient failure / single-request cap). Rotate after a
                 // short delay unless a timer rotation already replaced it.
+                slog("current \(requestID.uuidString.prefix(4)) ERROR=\(error?.localizedDescription ?? "?") → rotate in 300ms")
                 let endedID = requestID
                 try? await Task.sleep(for: .milliseconds(300))
                 guard isListening, currentRequestID == endedID else { return }
@@ -527,6 +549,7 @@ final class SpeechEngine {
 
             if isFinal {
                 // Recogniser finalised this request — hand off gaplessly to a new one.
+                slog("current \(requestID.uuidString.prefix(4)) FINAL → rotate")
                 rotateRecognitionRequest()
             }
         }
