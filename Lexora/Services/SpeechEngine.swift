@@ -72,8 +72,13 @@ final class SpeechEngine {
     // live audio. Without this, those tail words were dropped at every rotation.
     @ObservationIgnored private var drainingRequestID: UUID?
     @ObservationIgnored private var drainingTask: SFSpeechRecognitionTask?
-    @ObservationIgnored private var drainingFallbackText = ""
-    @ObservationIgnored private var drainingFallbackSegments: [TranscriptSegment] = []
+    // Snapshot of committedTranscript/Segments taken JUST BEFORE this drain's
+    // provisional text was appended. If the drain later delivers a fuller final,
+    // we rebuild committed = base + final to recover the tail. If it never does,
+    // the provisional text already banked at rotation stays — so nothing is lost.
+    @ObservationIgnored private var drainBaseTranscript = ""
+    @ObservationIgnored private var drainBaseSegments: [TranscriptSegment] = []
+    @ObservationIgnored private var drainProvisionalText = ""
 
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
@@ -183,27 +188,40 @@ final class SpeechEngine {
         }
     }
 
-    /// Gapless rotation. Drains the current request (endAudio, NOT cancel) so its
-    /// final result — including the tail spoken just before the handoff — can be
-    /// committed, while a fresh request immediately takes over the live audio.
+    /// Rotation with **commit-now, upgrade-on-final** banking.
+    ///
+    /// The old design waited for the drained request to deliver a `final` before
+    /// banking its minute of text. But SFSpeechRecognizer frequently stops a
+    /// request SILENTLY (no final, no error), so that text was never banked — and
+    /// when the next request finalised, the display collapsed to just its own
+    /// window, wiping everything before it (the "it deletes my text" bug).
+    ///
+    /// Now we bank the current window into `committedTranscript` IMMEDIATELY and
+    /// synchronously at the rotation moment, so it can never be lost. The drained
+    /// request keeps running only as a bonus: if it later delivers a fuller final
+    /// (with the half-second tail we didn't have yet), we UPGRADE the banked text.
     private func rotateRecognitionRequest() {
         guard isListening else { return }
-        slog("ROTATE (draining \(currentRequestID.uuidString.prefix(4)), tail=\"\(latestSegmentText.suffix(30))\")")
-        // Only one drain at a time. If a previous drain is still pending, commit
-        // its fallback now so we don't lose it.
-        if drainingRequestID != nil {
-            commitDraining(text: drainingFallbackText, segments: drainingFallbackSegments)
-        }
+        slog("ROTATE (draining \(currentRequestID.uuidString.prefix(4)), banking=\"\(latestSegmentText.suffix(30))\")")
+        // A previous drain is still pending? Its provisional text is already safely
+        // banked; just retire it (its late final, if any, becomes stale/ignored).
+        clearDrainState()
+
         if let oldReq = recognitionRequest, let task = recognitionTask {
+            // 1. Bank the current window NOW — guaranteed, before anything can stop.
+            drainBaseTranscript = committedTranscript
+            drainBaseSegments = committedSegments
+            drainProvisionalText = latestSegmentText
+            appendToCommitted(text: latestSegmentText, segments: latestSegments)
+
             drainingRequestID = currentRequestID
             drainingTask = task
-            drainingFallbackText = latestSegmentText      // fallback if no final arrives
-            drainingFallbackSegments = latestSegments
             latestSegmentText = ""
             latestSegments = []
-            // Switch the tap to a fresh request FIRST (so no audio buffer lands on
-            // the about-to-end request), THEN finalize the old one to capture its
-            // tail. This makes the handoff gapless.
+
+            // 2. Switch the tap to a fresh request FIRST (so no audio buffer lands on
+            //    the about-to-end request), THEN finalize the old one to capture its
+            //    tail. This keeps the audio handoff gapless.
             makeRecognitionRequestAndTask()
             oldReq.endAudio()
         } else {
@@ -213,18 +231,34 @@ final class SpeechEngine {
         }
     }
 
-    /// Appends a drained request's finalized text to the committed transcript.
-    private func commitDraining(text: String, segments: [TranscriptSegment]) {
-        if !text.isEmpty {
-            committedTranscript = committedTranscript.isEmpty
-                ? text
-                : committedTranscript + " " + text
-            committedSegments += segments
+    /// Appends text/segments to the committed (banked) transcript.
+    private func appendToCommitted(text: String, segments: [TranscriptSegment]) {
+        guard !text.isEmpty else { return }
+        committedTranscript = committedTranscript.isEmpty
+            ? text
+            : committedTranscript + " " + text
+        committedSegments += segments
+    }
+
+    /// A drained request delivered a final that's fuller than what we banked at
+    /// rotation — rebuild the banked text as (snapshot before drain) + (final) so
+    /// the tail is recovered. If the final isn't longer, the provisional stands.
+    private func upgradeDrainedCommit(finalText: String, segments: [SFTranscriptionSegment]) {
+        if finalText.count > drainProvisionalText.count {
+            committedTranscript = drainBaseTranscript.isEmpty
+                ? finalText
+                : drainBaseTranscript + " " + finalText
+            committedSegments = drainBaseSegments + makeSegments(segments)
         }
+        clearDrainState()
+    }
+
+    private func clearDrainState() {
         drainingRequestID = nil
         drainingTask = nil
-        drainingFallbackText = ""
-        drainingFallbackSegments = []
+        drainBaseTranscript = ""
+        drainBaseSegments = []
+        drainProvisionalText = ""
     }
 
     /// Maps recogniser segments to our model rows.
@@ -287,10 +321,7 @@ final class SpeechEngine {
         committedSegments = []
         latestSegmentText = ""
         latestSegments = []
-        drainingRequestID = nil
-        drainingTask = nil
-        drainingFallbackText = ""
-        drainingFallbackSegments = []
+        clearDrainState()
         wordTimestamps = []
 
         try await startAudioEngine()
@@ -319,10 +350,9 @@ final class SpeechEngine {
         recognitionTask?.cancel()
         recognitionRequest = nil
         recognitionTask = nil
-        // Retire any in-flight draining task too.
+        // Retire any in-flight draining task too (its window is already banked).
         drainingTask?.cancel()
-        drainingTask = nil
-        drainingRequestID = nil
+        clearDrainState()
 
         // Deactivate the audio session off the main thread (otherwise the
         // blocking setActive(false) freezes the UI — this was the stop-hang).
@@ -476,16 +506,16 @@ final class SpeechEngine {
         Task { @MainActor [weak self] in
             guard let self else { return }
 
-            // ── Draining (outgoing) request: commit its finalized tail, then retire.
+            // ── Draining (outgoing) request: its window was ALREADY banked at
+            //    rotation. If it delivers a fuller final, upgrade the banked text to
+            //    recover the tail; otherwise nothing to do — provisional stands.
             if requestID == drainingRequestID {
                 if isFinal, let text = segmentText {
-                    slog("drain \(requestID.uuidString.prefix(4)) FINAL commit=\"\(text.suffix(30))\"")
-                    commitDraining(text: text, segments: makeSegments(sfSegments))
+                    slog("drain \(requestID.uuidString.prefix(4)) FINAL upgrade=\"\(text.suffix(30))\"")
+                    upgradeDrainedCommit(finalText: text, segments: sfSegments)
                 } else if endedWithError {
-                    // Ended without a final — fall back to its last partial so its
-                    // text is never lost.
-                    slog("drain \(requestID.uuidString.prefix(4)) ERROR=\(error?.localizedDescription ?? "?") fallback=\"\(drainingFallbackText.suffix(30))\"")
-                    commitDraining(text: drainingFallbackText, segments: drainingFallbackSegments)
+                    slog("drain \(requestID.uuidString.prefix(4)) ended (\(error?.localizedDescription ?? "no final")) — provisional kept")
+                    clearDrainState()
                 }
                 return
             }
