@@ -722,8 +722,10 @@ struct RecordingView: View {
             // Bookmark button (active during recording — inserts a marker in transcript)
             if engine.isListening {
                 Button {
+                    // Insert via the engine so the marker is banked in committedTranscript —
+                    // appending to editedTranscript here got wiped by the next engine update.
                     let marker = "\n[★ \(Date().formatted(date: .omitted, time: .shortened))]"
-                    editedTranscript += marker
+                    engine.insertMarker(marker)
                     if appState.profile.hapticFeedbackEnabled {
                         HapticManager.softConfirm()
                     }

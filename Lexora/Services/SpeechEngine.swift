@@ -231,6 +231,18 @@ final class SpeechEngine {
         }
     }
 
+    /// Inserts a bookmark/marker into the transcript at the current spoken point.
+    /// Rotating first banks everything said so far, so the marker lands exactly
+    /// where the user tapped it — and because it lives in committedTranscript,
+    /// subsequent recognition updates can't wipe it (they only append after it).
+    func insertMarker(_ marker: String) {
+        guard isListening else { return }
+        rotateRecognitionRequest()
+        appendToCommitted(text: marker, segments: [])
+        currentTranscript = committedTranscript
+        onTranscriptUpdate?(currentTranscript, currentConfidence)
+    }
+
     /// Appends text/segments to the committed (banked) transcript.
     private func appendToCommitted(text: String, segments: [TranscriptSegment]) {
         guard !text.isEmpty else { return }

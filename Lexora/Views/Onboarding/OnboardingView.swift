@@ -141,7 +141,8 @@ struct OnboardingView: View {
                     featureBullet(icon: "brain.head.profile", text: "Detects your native language and accent automatically")
                     featureBullet(icon: "globe", text: "Handles code-switching between languages mid-sentence")
                     featureBullet(icon: "sparkles", text: "Gets smarter with every correction you make")
-                    featureBullet(icon: "icloud.fill", text: "Backs up to iCloud and syncs across your Apple devices")
+                    // NOTE: switch back to the iCloud-sync bullet once CloudSyncService.cloudSyncEnabled is true.
+                    featureBullet(icon: "lock.shield.fill", text: "Private by design — everything stays on your device")
                 }
                 .padding(.top, 8)
             }

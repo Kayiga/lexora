@@ -638,7 +638,8 @@ final class AppState {
         let sessionMilestones: Set<Int> = [5, 25, 100, 250]
         let wordMilestones: Set<Int>    = [1_000, 5_000, 10_000, 50_000]
 
-        let lastSessionWords = sessions.last?.wordCount ?? 0
+        // Newest session is inserted at index 0 (sessions.last is the OLDEST).
+        let lastSessionWords = sessions.first?.wordCount ?? 0
         guard sessionMilestones.contains(count)
               || wordMilestones.contains(where: { totalWords >= $0 && totalWords - lastSessionWords < $0 })
         else { return }

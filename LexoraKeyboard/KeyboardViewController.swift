@@ -136,6 +136,15 @@ class KeyboardViewController: UIInputViewController {
     private func startDictation() {
         guard !isListening else { return }
 
+        // The mic and network paths are blocked without "Allow Full Access" —
+        // the audio session just throws and the mic appears to do nothing.
+        // Tell the user exactly what to enable instead of failing silently.
+        guard hasFullAccess else {
+            currentText = "Enable Full Access for Lexora: Settings → General → Keyboard → Keyboards → Lexora Keyboard → Allow Full Access."
+            rebuildUI()
+            return
+        }
+
         // Speech recognition must be authorized. A keyboard extension can't reliably
         // show the system prompt, so if it isn't already authorized (granted via the
         // main Lexora app's onboarding), request it and tell the user where to grant it.
@@ -219,7 +228,9 @@ class KeyboardViewController: UIInputViewController {
             }
             rebuildUI()
         } catch {
-            // Dictation unavailable in this context
+            // Surface the failure — a silent catch here looked like a dead mic button.
+            currentText = "Couldn't start the microphone. Make sure Lexora has mic access (record once in the Lexora app), then try again."
+            rebuildUI()
         }
     }
 
@@ -306,10 +317,20 @@ class KeyboardViewController: UIInputViewController {
 
     // MARK: - Height
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
+    /// Keyboard extensions must declare their height with an Auto Layout
+    /// constraint — mutating `view.frame` gets overridden by the system and
+    /// the keyboard renders collapsed/mis-sized. Priority 999 (not required)
+    /// so the system can still resolve conflicts during rotation.
+    private var heightConstraint: NSLayoutConstraint?
+
+    override func updateViewConstraints() {
+        super.updateViewConstraints()
+        guard heightConstraint == nil else { return }
         // transcript(88) + vocab(42) + divider(1) + toolbar(102)
-        view.frame.size.height = 233
+        let c = view.heightAnchor.constraint(equalToConstant: 233)
+        c.priority = UILayoutPriority(999)
+        c.isActive = true
+        heightConstraint = c
     }
 }
 
