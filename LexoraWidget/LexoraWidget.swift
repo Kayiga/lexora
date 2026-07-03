@@ -501,7 +501,7 @@ struct RecordingLockScreenView: View {
                 HStack(spacing: 8) {
                     Label("\(context.state.wordCount) words", systemImage: "text.word.spacing")
                     Text("·")
-                    Text(context.state.elapsedFormatted)
+                    liveElapsedText(context.state)
                 }
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.75))
@@ -527,6 +527,22 @@ struct RecordingLockScreenView: View {
     }
 }
 
+/// Elapsed clock for Live Activity views. While listening this is a SELF-TICKING
+/// timer rendered by the system — it stays live without any state pushes (pushing
+/// elapsed seconds once a second blew the ActivityKit update budget and froze the
+/// Dynamic Island). When paused/ended it shows the frozen elapsed string.
+@ViewBuilder
+func liveElapsedText(_ state: RecordingActivityAttributes.ContentState) -> some View {
+    if state.isListening {
+        Text(timerInterval: state.startedAt...Date(timeIntervalSinceNow: 8 * 3600),
+             countsDown: false, showsHours: false)
+            .monospacedDigit()
+    } else {
+        Text(state.elapsedFormatted)
+            .monospacedDigit()
+    }
+}
+
 // MARK: - Live Activity Configuration
 
 struct RecordingLiveActivity: Widget {
@@ -546,9 +562,10 @@ struct RecordingLiveActivity: Widget {
                     .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.elapsedFormatted)
+                    liveElapsedText(context.state)
                         .font(.subheadline.monospacedDigit().weight(.medium))
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: 60)
                         .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -576,9 +593,10 @@ struct RecordingLiveActivity: Widget {
                     .font(.system(size: 14, weight: .semibold))
                     .padding(.leading, 4)
             } compactTrailing: {
-                Text(context.state.elapsedFormatted)
+                liveElapsedText(context.state)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.white)
+                    .frame(maxWidth: 44)
                     .padding(.trailing, 4)
             } minimal: {
                 Image(systemName: "mic.fill")

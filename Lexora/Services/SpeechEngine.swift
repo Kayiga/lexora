@@ -82,6 +82,14 @@ final class SpeechEngine {
     /// Drives the pause-aware rotation timer.
     @ObservationIgnored private var currentRequestStartedAt = Date()
 
+    /// iOS 26+ SpeechAnalyzer/SpeechTranscriber core (type-erased so the class
+    /// compiles for iOS 18). Non-nil = the modern engine is driving transcription:
+    /// unlimited-length dictation with proper volatile→finalized results — no
+    /// 1-minute cap, no rotation, none of SFSpeechRecognizer's silent stalls.
+    /// `nonisolated(unsafe)` because the audio tap thread reads it to feed buffers
+    /// (same pattern as `recognitionRequest`); it's only written on the main actor.
+    @ObservationIgnored nonisolated(unsafe) private var modernCore: AnyObject?
+
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
         self.learningEngine = learningEngine
@@ -230,9 +238,23 @@ final class SpeechEngine {
     /// subsequent recognition updates can't wipe it (they only append after it).
     func insertMarker(_ marker: String) {
         guard isListening else { return }
-        rotateRecognitionRequest()
-        appendToCommitted(text: marker, segments: [])
-        currentTranscript = committedTranscript
+        if modernCore == nil {
+            // Legacy: rotate first so everything spoken so far is banked and the
+            // marker lands at the current spoken point.
+            rotateRecognitionRequest()
+            appendToCommitted(text: marker, segments: [])
+            currentTranscript = committedTranscript
+        } else {
+            // Modern: append the marker to the committed text only. The volatile
+            // window is NOT banked here — its final will arrive from the analyzer
+            // (banking it manually would duplicate it). The marker lands at the
+            // last finalised point, within a few seconds of the tap.
+            appendToCommitted(text: marker, segments: [])
+            currentTranscript = committedTranscript.isEmpty
+                ? latestSegmentText
+                : (latestSegmentText.isEmpty ? committedTranscript
+                                             : committedTranscript + " " + latestSegmentText)
+        }
         onTranscriptUpdate?(currentTranscript, currentConfidence)
     }
 
@@ -293,7 +315,25 @@ final class SpeechEngine {
 
         let targetLanguage = language ?? learningEngine.profile.detectedPrimaryLanguage
         try configureRecognizer(for: targetLanguage)
-        slog("startListening lang=\(targetLanguage) recognizer=\(recognizer?.locale.identifier ?? "nil") available=\(recognizer?.isAvailable ?? false) supportsOnDevice=\(recognizer?.supportsOnDeviceRecognition ?? false) rotation=\(rotationSoftInterval)-\(rotationHardInterval)s")
+
+        // Prefer the modern SpeechAnalyzer engine (iOS 26+): purpose-built for
+        // unlimited live dictation. Falls back to legacy SFSpeechRecognizer with
+        // pause-aware rotation when unavailable (older iOS / unsupported locale).
+        modernCore = nil
+        if #available(iOS 26.0, *) {
+            modernCore = await ModernTranscribeCore.make(
+                localeIdentifier: targetLanguage,
+                onResult: { [weak self] text, isFinal in
+                    Task { @MainActor [weak self] in
+                        self?.handleModernResult(text, isFinal: isFinal)
+                    }
+                },
+                log: { [weak self] line in
+                    Task { @MainActor [weak self] in self?.slog(line) }
+                }
+            )
+        }
+        slog("startListening lang=\(targetLanguage) engine=\(modernCore != nil ? "SpeechAnalyzer(iOS26)" : "SFSpeechRecognizer+rotation \(rotationSoftInterval)-\(rotationHardInterval)s")")
 
         currentSession = TranscriptionSession(
             contextProfileID: contextProfileID,
@@ -309,7 +349,7 @@ final class SpeechEngine {
 
         try await startAudioEngine()
         isListening = true
-        startRotationTimer()
+        if modernCore == nil { startRotationTimer() }   // rotation is a legacy-only workaround
         if silenceAutoStopEnabled { startSilenceTimer() }
     }
 
@@ -334,6 +374,14 @@ final class SpeechEngine {
         recognitionRequest = nil
         recognitionTask = nil
 
+        // Tear down the modern engine (if active). Finalisation is async but the
+        // volatile window is banked synchronously below, so nothing is lost even
+        // if the analyzer never delivers another result.
+        if #available(iOS 26.0, *), let core = modernCore as? ModernTranscribeCore {
+            modernCore = nil
+            Task.detached { await core.finishAndTearDown() }
+        }
+
         // Bank the current window so the words spoken since the last rotation
         // are part of the final transcript even if no further callback arrives.
         appendToCommitted(text: latestSegmentText, segments: latestSegments)
@@ -357,7 +405,9 @@ final class SpeechEngine {
         rotationTask?.cancel()
         rotationTask = nil
         audioEngine.pause()
-        recognitionRequest?.endAudio()
+        // Modern engine: just stop feeding audio — the analyzer waits.
+        // Legacy: end the request so it finalises what it has.
+        if modernCore == nil { recognitionRequest?.endAudio() }
         isPaused = true
         isListening = false
     }
@@ -369,7 +419,7 @@ final class SpeechEngine {
         try await startAudioEngine()
         isPaused = false
         isListening = true
-        startRotationTimer()
+        if modernCore == nil { startRotationTimer() }
     }
 
     // MARK: - Configuration
@@ -456,7 +506,8 @@ final class SpeechEngine {
         // Configure + activate the audio session off the main thread.
         try await activateRecordingSession()
 
-        makeRecognitionRequestAndTask()
+        // Legacy path only — the modern analyzer receives buffers directly.
+        if modernCore == nil { makeRecognitionRequestAndTask() }
 
         let inputNode = audioEngine.inputNode
 
@@ -478,15 +529,87 @@ final class SpeechEngine {
         }
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
-            self?.updateSignalLevel(buffer: buffer)
+            guard let self else { return }
+            if #available(iOS 26.0, *), let core = self.modernCore as? ModernTranscribeCore {
+                core.feed(buffer)
+            } else {
+                self.recognitionRequest?.append(buffer)
+            }
+            self.updateSignalLevel(buffer: buffer)
         }
 
         audioEngine.prepare()
         try audioEngine.start()
     }
 
-    // MARK: - Result Processing
+    // MARK: - Result Processing (modern SpeechAnalyzer path, iOS 26+)
+
+    /// Handles a result from the SpeechTranscriber stream.
+    /// - volatile (isFinal=false): replaces the current in-flight window.
+    /// - finalized (isFinal=true): appended permanently to committedTranscript;
+    ///   the volatile window resets. Text can never be lost or overwritten.
+    private func handleModernResult(_ text: String, isFinal: Bool) {
+        guard isListening else { return }
+
+        if isFinal {
+            appendToCommitted(
+                text: text,
+                segments: text.isEmpty ? [] : [TranscriptSegment(
+                    text: text,
+                    startTime: 0, endTime: 0,
+                    confidence: 1.0,
+                    language: detectedLanguage,
+                    isFiller: false
+                )]
+            )
+            latestSegmentText = ""
+            latestSegments = []
+        } else {
+            latestSegmentText = text
+        }
+
+        let live = committedTranscript.isEmpty
+            ? latestSegmentText
+            : (latestSegmentText.isEmpty ? committedTranscript
+                                         : committedTranscript + " " + latestSegmentText)
+
+        // Same intelligence pipeline as the legacy path: continuous language
+        // detection + the user's learned corrections/style.
+        let langResult = languageIntelligence.detect(text: live)
+        if langResult.language != detectedLanguage && langResult.confidence > 0.7 {
+            detectedLanguage = langResult.language
+            onLanguageDetected?(langResult.language, langResult.confidence)
+        }
+
+        let corrected = learningEngine.profile.smartCorrectionEnabled
+            ? learningEngine.applySmartCorrections(to: live)
+            : live
+
+        // Monotonic display: volatile hypotheses may briefly shrink while the
+        // model revises — never show a shorter string except on a final.
+        if isFinal || corrected.count >= currentTranscript.count {
+            currentTranscript = corrected
+            currentConfidence = 1.0
+            onTranscriptUpdate?(corrected, 1.0)
+        }
+
+        lastWordTime = Date()
+        if let start = sessionStartTime {
+            let elapsed = Date().timeIntervalSince(start)
+            if elapsed > 0 {
+                let words = Double(live.split(whereSeparator: { $0.isWhitespace }).count)
+                currentWPM = (words / elapsed) * 60
+            }
+        }
+
+        currentSession?.rawTranscript = live
+        currentSession?.finalTranscript = currentTranscript
+        currentSession?.confidenceAverage = 1.0
+        currentSession?.primaryLanguage = detectedLanguage
+        currentSession?.segments = committedSegments
+    }
+
+    // MARK: - Result Processing (legacy SFSpeechRecognizer path)
 
     private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?, requestID: UUID) {
         // Snapshot result data, then hop to the main actor for all state changes.
@@ -646,5 +769,141 @@ enum SpeechError: LocalizedError {
         case .engineFailed: return "The audio engine failed to start."
         case .recognizerUnavailable(let lang): return "Speech recognition is unavailable for \(lang)."
         }
+    }
+}
+
+// MARK: - Modern Transcription Core (iOS 26+, SpeechAnalyzer / SpeechTranscriber)
+
+/// Wraps Apple's SpeechAnalyzer pipeline — the API purpose-built for unlimited
+/// live dictation. Unlike SFSpeechRecognizer there is NO ~1-minute request cap,
+/// no silent stalls at ~180-230 words, and results come as a clean
+/// volatile → finalized stream, so no rotation workarounds are needed.
+///
+/// Threading: `feed(_:)` is called from the audio tap thread; buffers flow
+/// through an AsyncStream into the analyzer. Everything else is async/await.
+@available(iOS 26.0, *)
+final class ModernTranscribeCore: @unchecked Sendable {
+
+    private let analyzer: SpeechAnalyzer
+    private let transcriber: SpeechTranscriber
+    private let inputBuilder: AsyncStream<AnalyzerInput>.Continuation
+    private let analyzerFormat: AVAudioFormat?
+    private var resultsTask: Task<Void, Never>?
+    // Converter state — only touched from the audio tap thread.
+    private var converter: AVAudioConverter?
+    private var converterSourceFormat: AVAudioFormat?
+
+    private init(analyzer: SpeechAnalyzer,
+                 transcriber: SpeechTranscriber,
+                 inputBuilder: AsyncStream<AnalyzerInput>.Continuation,
+                 analyzerFormat: AVAudioFormat?) {
+        self.analyzer = analyzer
+        self.transcriber = transcriber
+        self.inputBuilder = inputBuilder
+        self.analyzerFormat = analyzerFormat
+    }
+
+    /// Builds and starts a live transcription pipeline for the locale.
+    /// Returns nil when the locale isn't supported (caller falls back to legacy).
+    static func make(
+        localeIdentifier: String,
+        onResult: @escaping @Sendable (String, Bool) -> Void,
+        log: @escaping @Sendable (String) -> Void
+    ) async -> ModernTranscribeCore? {
+        let locale = Locale(identifier: localeIdentifier)
+
+        let supported = await SpeechTranscriber.supportedLocales
+        guard supported.contains(where: {
+            $0.identifier(.bcp47).lowercased() == locale.identifier(.bcp47).lowercased()
+        }) else {
+            log("SpeechTranscriber: locale \(localeIdentifier) unsupported → legacy")
+            return nil
+        }
+
+        let transcriber = SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: []
+        )
+        let analyzer = SpeechAnalyzer(modules: [transcriber])
+
+        do {
+            // Download the on-device model if it isn't installed yet (one-time).
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                log("SpeechTranscriber: downloading model assets…")
+                try await request.downloadAndInstall()
+                log("SpeechTranscriber: model ready")
+            }
+
+            let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
+            let (inputSequence, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
+            try await analyzer.start(inputSequence: inputSequence)
+
+            let core = ModernTranscribeCore(
+                analyzer: analyzer,
+                transcriber: transcriber,
+                inputBuilder: inputBuilder,
+                analyzerFormat: format
+            )
+
+            core.resultsTask = Task {
+                do {
+                    for try await result in transcriber.results {
+                        let text = String(result.text.characters)
+                        onResult(text, result.isFinal)
+                    }
+                } catch {
+                    log("SpeechTranscriber results stream ended: \(error.localizedDescription)")
+                }
+            }
+
+            log("SpeechAnalyzer started (format=\(format?.sampleRate ?? 0)Hz)")
+            return core
+        } catch {
+            log("SpeechAnalyzer start failed: \(error.localizedDescription) → legacy")
+            return nil
+        }
+    }
+
+    /// Called from the audio tap thread for every captured buffer.
+    nonisolated func feed(_ buffer: AVAudioPCMBuffer) {
+        guard let target = analyzerFormat else {
+            inputBuilder.yield(AnalyzerInput(buffer: buffer))
+            return
+        }
+        // Fast path — formats already match.
+        if buffer.format == target {
+            inputBuilder.yield(AnalyzerInput(buffer: buffer))
+            return
+        }
+        // Convert to the analyzer's preferred format.
+        if converter == nil || converterSourceFormat != buffer.format {
+            converter = AVAudioConverter(from: buffer.format, to: target)
+            converterSourceFormat = buffer.format
+        }
+        guard let converter else { return }
+        let ratio = target.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 16
+        guard let out = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return }
+        var provided = false
+        var err: NSError?
+        converter.convert(to: out, error: &err) { _, status in
+            if provided { status.pointee = .noDataNow; return nil }
+            provided = true
+            status.pointee = .haveData
+            return buffer
+        }
+        if err == nil, out.frameLength > 0 {
+            inputBuilder.yield(AnalyzerInput(buffer: out))
+        }
+    }
+
+    /// Ends the input stream and lets the analyzer finalise remaining audio.
+    func finishAndTearDown() async {
+        inputBuilder.finish()
+        try? await analyzer.finalizeAndFinishThroughEndOfInput()
+        resultsTask?.cancel()
+        resultsTask = nil
     }
 }
