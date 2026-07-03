@@ -72,6 +72,11 @@ final class SpeechEngine {
     // live audio. Without this, those tail words were dropped at every rotation.
     @ObservationIgnored private var drainingRequestID: UUID?
     @ObservationIgnored private var drainingTask: SFSpeechRecognitionTask?
+    // Keeps the OUTGOING recognizer alive while its task drains. Each request
+    // gets its own SFSpeechRecognizer (see makeRecognitionRequestAndTask) —
+    // one recognizer will not run a second concurrent task, which froze all
+    // new text after the first 45s rotation.
+    @ObservationIgnored private var drainingRecognizer: SFSpeechRecognizer?
     // Snapshot of committedTranscript/Segments taken JUST BEFORE this drain's
     // provisional text was appended. If the drain later delivers a fuller final,
     // we rebuild committed = base + final to recover the tail. If it never does,
@@ -216,6 +221,7 @@ final class SpeechEngine {
 
             drainingRequestID = currentRequestID
             drainingTask = task
+            drainingRecognizer = recognizer   // keep the old recognizer alive for the drain
             latestSegmentText = ""
             latestSegments = []
 
@@ -268,6 +274,7 @@ final class SpeechEngine {
     private func clearDrainState() {
         drainingRequestID = nil
         drainingTask = nil
+        drainingRecognizer = nil
         drainBaseTranscript = ""
         drainBaseSegments = []
         drainProvisionalText = ""
@@ -452,6 +459,17 @@ final class SpeechEngine {
     }
 
     private func makeRecognitionRequestAndTask() {
+        // Every request gets a FRESH SFSpeechRecognizer. A single recognizer
+        // instance will not run a second concurrent task: after a rotation the
+        // new task started (task != nil) but never delivered a single partial
+        // while the drained task was still attached — on device this froze all
+        // new text after the first 45s handoff. A per-request recognizer gives
+        // the new task a clean instance; the outgoing one keeps its own
+        // recognizer alive via drainingRecognizer until the drain retires.
+        if let locale = recognizer?.locale,
+           let fresh = SFSpeechRecognizer(locale: locale), fresh.isAvailable {
+            recognizer = fresh
+        }
         let request = SFSpeechAudioBufferRecognitionRequest()
         // On-device recognition preferred; fall back to server-based if unsupported.
         request.requiresOnDeviceRecognition = recognizer?.supportsOnDeviceRecognition ?? false
