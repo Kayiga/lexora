@@ -59,7 +59,7 @@ class KeyboardViewController: UIInputViewController {
     private lazy var profile: KeyboardProfile = loadProfile()
 
     /// Shown in the UI so a stale cached keyboard binary is instantly visible.
-    static let keyboardBuildTag = "kb-5"
+    static let keyboardBuildTag = "kb-6"
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -95,8 +95,21 @@ class KeyboardViewController: UIInputViewController {
         profile = loadProfile()
         selectedLanguage = profile.detectedPrimaryLanguage
         handoffText = loadHandoff()
+        // No App Group on LocalDev builds → fall back to the tagged clipboard.
+        // contains() checks the type WITHOUT reading (no iOS paste banner);
+        // the string is only read when the user taps Insert.
+        if handoffText == nil, hasFullAccess,
+           UIPasteboard.general.contains(pasteboardTypes: ["com.yiga.lexora.transcript"]) {
+            clipboardHandoffAvailable = true
+        } else {
+            clipboardHandoffAvailable = false
+        }
+        klog("viewWillAppear handoffFile=\(handoffText != nil) clipboard=\(clipboardHandoffAvailable)")
         rebuildUI()
     }
+
+    /// True when the clipboard holds a Lexora-tagged dictation (read lazily).
+    private var clipboardHandoffAvailable = false
 
     // MARK: - App → keyboard handoff
 
@@ -124,10 +137,20 @@ class KeyboardViewController: UIInputViewController {
     }
 
     private func insertHandoff() {
-        guard let text = handoffText else { return }
+        let text: String?
+        if let fileText = handoffText {
+            text = fileText
+            if let url = handoffURL { try? FileManager.default.removeItem(at: url) }
+        } else if clipboardHandoffAvailable {
+            // Reading the string shows iOS's one-time paste notice — expected.
+            text = UIPasteboard.general.string
+        } else {
+            text = nil
+        }
+        guard let text, !text.isEmpty else { return }
         insertText(text + " ")
         handoffText = nil
-        if let url = handoffURL { try? FileManager.default.removeItem(at: url) }
+        clipboardHandoffAvailable = false
         if profile.hapticFeedbackEnabled {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
@@ -192,6 +215,7 @@ class KeyboardViewController: UIInputViewController {
             onInsertHandoff:   { [weak self] in self?.insertHandoff() },
             onOpenLexora:      { [weak self] in self?.openLexoraApp() },
             handoffPreview:     handoffText,
+            handoffFromClipboard: clipboardHandoffAvailable,
             isListening:        Binding(get: { [weak self] in self?.isListening ?? false }, set: { _ in }),
             currentTranscript:  Binding(get: { [weak self] in self?.currentText ?? "" }, set: { _ in }),
             selectedLanguage:   Binding(get: { [weak self] in self?.selectedLanguage ?? "en-US" }, set: { _ in }),
@@ -452,6 +476,9 @@ struct KeyboardRootView: View {
     var onOpenLexora:      () -> Void
     /// Latest dictation from the Lexora app, offered for one-tap insertion.
     var handoffPreview: String?
+    /// Dictation is waiting on the (tagged) clipboard — no preview available
+    /// until tapped, because reading it early would fire the iOS paste banner.
+    var handoffFromClipboard: Bool = false
 
     @Binding var isListening:       Bool
     @Binding var currentTranscript: String
@@ -499,7 +526,8 @@ struct KeyboardRootView: View {
                 .padding(.top, 10)
 
             VStack(alignment: .leading, spacing: 4) {
-                if currentTranscript.isEmpty, let handoff = handoffPreview, !isListening {
+                if currentTranscript.isEmpty, !isListening,
+                   handoffPreview != nil || handoffFromClipboard {
                     // A dictation from the Lexora app is waiting — one-tap insert.
                     Button(action: onInsertHandoff) {
                         HStack(spacing: 8) {
@@ -509,7 +537,7 @@ struct KeyboardRootView: View {
                                 Text("Insert your Lexora dictation")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.primary)
-                                Text(handoff)
+                                Text(handoffPreview ?? "Tap to insert what you just dictated")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)

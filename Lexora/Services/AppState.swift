@@ -134,23 +134,34 @@ final class AppState {
 
     // MARK: - Keyboard Handoff (app → keyboard)
 
-    /// Writes the most recent transcript to the App Group so the keyboard can
-    /// insert it into any app ("dictate in Lexora, insert from the keyboard").
+    /// Hands the most recent transcript to the keyboard so it can insert it in
+    /// any app ("dictate in Lexora, insert from the keyboard"). Two channels:
+    /// 1. App Group file — only works with the paid-account entitlements
+    ///    (Debug/LocalDev builds have NO App Group, the write silently no-ops).
+    /// 2. Clipboard, tagged with a Lexora marker type — works with ANY signing,
+    ///    and doubles as "your dictation is ready to paste anywhere".
     static func writeKeyboardHandoff(transcript: String, language: String) {
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty,
-              let container = FileManager.default
-                .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yiga.Lexora")
-        else { return }
-        struct Handoff: Codable {
-            var transcript: String
-            var language: String
-            var createdAt: Date
+        guard !text.isEmpty else { return }
+
+        if let container = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yiga.Lexora") {
+            struct Handoff: Codable {
+                var transcript: String
+                var language: String
+                var createdAt: Date
+            }
+            let handoff = Handoff(transcript: text, language: language, createdAt: Date())
+            if let data = try? JSONEncoder().encode(handoff) {
+                try? data.write(to: container.appendingPathComponent("handoff_latest.json"))
+            }
         }
-        let handoff = Handoff(transcript: text, language: language, createdAt: Date())
-        if let data = try? JSONEncoder().encode(handoff) {
-            try? data.write(to: container.appendingPathComponent("handoff_latest.json"))
-        }
+
+        UIPasteboard.general.setItems(
+            [["public.utf8-plain-text": text,
+              "com.yiga.lexora.transcript": text]],
+            options: [.expirationDate: Date().addingTimeInterval(30 * 60)]
+        )
     }
 
     // MARK: - Keyboard Extension Session Import
