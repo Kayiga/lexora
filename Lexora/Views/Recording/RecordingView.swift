@@ -1521,6 +1521,7 @@ struct CorrectionSheet: View {
 /// Pre-defined recording modes that pre-configure language and formality.
 enum RecordingTemplate: String, CaseIterable, Equatable {
     case meeting    = "Meeting"
+    case email      = "Email"
     case lecture    = "Lecture"
     case note       = "Quick note"
     case dictation  = "Dictation"
@@ -1531,6 +1532,7 @@ enum RecordingTemplate: String, CaseIterable, Equatable {
     var icon: String {
         switch self {
         case .meeting:   return "person.3.fill"
+        case .email:     return "envelope.fill"
         case .lecture:   return "book.fill"
         case .note:      return "note.text"
         case .dictation: return "text.cursor"
@@ -1541,6 +1543,7 @@ enum RecordingTemplate: String, CaseIterable, Equatable {
     var color: Color {
         switch self {
         case .meeting:   return .blue
+        case .email:     return .teal
         case .lecture:   return .purple
         case .note:      return .green
         case .dictation: return .orange
@@ -1554,6 +1557,7 @@ enum RecordingTemplate: String, CaseIterable, Equatable {
     var formality: FormalityMode? {
         switch self {
         case .meeting:   return .professional
+        case .email:     return .email
         case .lecture:   return .professional
         case .note:      return .casual
         case .dictation: return .verbatim

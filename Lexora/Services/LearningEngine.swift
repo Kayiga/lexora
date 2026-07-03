@@ -111,6 +111,11 @@ final class LearningEngine {
             result = stripFillers(from: result)
         }
 
+        // Structural formatting: spoken commands (new line / bullet point /
+        // next number), sentence capitalisation, email layout. Deterministic,
+        // on-device, and applied to the RAW live text on every update.
+        result = DictationFormatter.format(result, mode: profile.preferredOutputFormality)
+
         return result
     }
 
@@ -308,7 +313,7 @@ final class LearningEngine {
 
     private func applyFormalityMode(to text: String) -> String {
         switch profile.preferredOutputFormality {
-        case .professional:
+        case .professional, .email:
             return text
                 .replacingOccurrences(of: "gonna", with: "going to")
                 .replacingOccurrences(of: "wanna", with: "want to")
@@ -475,5 +480,176 @@ final class ProfileStorage {
             streak:        defaults?.integer(forKey: "widget.streak")        ?? 0,
             dailyGoal:     defaults?.integer(forKey: "widget.dailyGoal")     ?? 0
         )
+    }
+}
+
+// MARK: - Dictation Formatter
+
+/// Deterministic, on-device structural formatting for dictated text.
+/// Runs on the full raw transcript on every live update (input is always the
+/// unformatted ASR text, so repeated application never compounds).
+///
+/// Capabilities by mode:
+/// - all modes except verbatim: spoken commands —
+///     "new paragraph"              → blank line
+///     "new line"                   → line break
+///     "bullet point" / "new bullet"→ "• " on a new line
+///     "next number"/"numbered point"→ auto-incrementing "1. ", "2. ", …
+/// - professional & email: contraction cleanup (upstream), sentence
+///   capitalisation, whitespace/punctuation hygiene.
+/// - email: greeting on its own line ("Hi Sarah," + blank line), Subject:
+///   extraction ("subject …"), sign-off block ("best regards john" →
+///   "\n\nBest regards,\nJohn").
+enum DictationFormatter {
+
+    static func format(_ text: String, mode: FormalityMode) -> String {
+        guard mode != .verbatim, !text.isEmpty else { return text }
+        var result = text
+
+        result = applySpokenCommands(to: result)
+
+        if mode == .email {
+            result = applyEmailLayout(to: result)
+        }
+        if mode == .email || mode == .professional {
+            result = capitaliseSentences(in: result)
+        }
+
+        result = tidyWhitespace(in: result)
+        return result
+    }
+
+    // MARK: Spoken commands
+
+    private static func applySpokenCommands(to text: String) -> String {
+        var result = text
+
+        // Order matters: "new paragraph" before "new line" is irrelevant (distinct
+        // words) but longer bullet phrases must run before shorter ones.
+        let simple: [(pattern: String, replacement: String)] = [
+            ("(?i)[,.]?\\s*\\bnew paragraph\\b[,.]?\\s*", "\n\n"),
+            ("(?i)[,.]?\\s*\\bnew line\\b[,.]?\\s*",      "\n"),
+            ("(?i)[,.]?\\s*\\b(?:bullet point|new bullet)\\b[,.]?\\s*", "\n• "),
+        ]
+        for rule in simple {
+            result = result.replacingOccurrences(
+                of: rule.pattern, with: rule.replacement, options: .regularExpression)
+        }
+
+        // Auto-numbered list: each "next number"/"numbered point" becomes the
+        // next integer, counted per occurrence.
+        if result.range(of: "(?i)\\b(?:next number|numbered point)\\b",
+                        options: .regularExpression) != nil {
+            var n = 0
+            var out = ""
+            var remaining = Substring(result)
+            while let r = remaining.range(of: "(?i)[,.]?\\s*\\b(?:next number|numbered point)\\b[,.]?\\s*",
+                                          options: .regularExpression) {
+                n += 1
+                out += remaining[..<r.lowerBound] + "\n\(n). "
+                remaining = remaining[r.upperBound...]
+            }
+            out += remaining
+            result = out
+        }
+
+        return result
+    }
+
+    // MARK: Email layout
+
+    private static let signoffPhrases = [
+        "best regards", "kind regards", "warm regards", "regards",
+        "sincerely", "best wishes", "many thanks", "thank you", "thanks",
+        "cheers", "yours faithfully", "yours truly", "best"
+    ]
+
+    private static func applyEmailLayout(to text: String) -> String {
+        var result = text
+
+        // "subject <line>" at the very start → "Subject: <Line>" + blank line.
+        // The subject runs to the first sentence break or line break.
+        if let r = result.range(of: "(?i)^\\s*subject[,:]?\\s+([^.\\n]{1,80})[.]?\\s*",
+                                options: .regularExpression) {
+            let matched = String(result[r])
+            let content = matched.replacingOccurrences(
+                of: "(?i)^\\s*subject[,:]?\\s+", with: "", options: .regularExpression)
+                .trimmingCharacters(in: CharacterSet(charactersIn: ". \n"))
+            result.replaceSubrange(r, with: "Subject: \(content.capitalisedFirst)\n\n")
+        }
+
+        // Greeting: leading "hi|hello|hey|dear <name (1-3 words)>" → own line + blank line.
+        result = result.replacingOccurrences(
+            of: "(?im)^(\\h*(?:hi|hello|hey|dear)\\s+[\\p{L}'’-]+(?:\\s+[\\p{L}'’-]+){0,2}?)[,.]?\\h+",
+            with: "$1,\n\n",
+            options: .regularExpression)
+
+        // Sign-off near the end: "<signoff>[,.]? <name (0-3 words)>" at the tail →
+        // "\n\nSignoff,\nName". Longest phrases first so "best regards" wins over "best".
+        for phrase in signoffPhrases {
+            let esc = NSRegularExpression.escapedPattern(for: phrase)
+            let pattern = "(?i),?\\s+\\b(\(esc))\\b[,.]?\\s*((?:[\\p{L}'’-]+\\s*){0,3})[.]?\\s*$"
+            if let r = result.range(of: pattern, options: .regularExpression) {
+                let ns = result as NSString
+                let regex = try? NSRegularExpression(pattern: pattern)
+                if let m = regex?.firstMatch(in: result, range: NSRange(r, in: result)) {
+                    let signoff = ns.substring(with: m.range(at: 1)).capitalisedFirst
+                    let name = ns.substring(with: m.range(at: 2))
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let block = name.isEmpty
+                        ? "\n\n\(signoff),"
+                        : "\n\n\(signoff),\n\(name.capitalisedFirst)"
+                    result.replaceSubrange(r, with: block)
+                }
+                break
+            }
+        }
+
+        return result
+    }
+
+    // MARK: Capitalisation & hygiene
+
+    /// Capitalises the first letter of the text, of every sentence, and of
+    /// every list-item line.
+    private static func capitaliseSentences(in text: String) -> String {
+        var chars = Array(text)
+        var capitaliseNext = true
+        var i = 0
+        while i < chars.count {
+            let c = chars[i]
+            if capitaliseNext, c.isLetter {
+                chars[i] = Character(c.uppercased())
+                capitaliseNext = false
+            } else if c == "." || c == "!" || c == "?" || c == "\n" {
+                capitaliseNext = true
+            }
+            i += 1
+        }
+        return String(chars)
+    }
+
+    private static func tidyWhitespace(in text: String) -> String {
+        var result = text
+        // Collapse runs of spaces (not newlines).
+        result = result.replacingOccurrences(of: "[ \\t]{2,}", with: " ",
+                                             options: .regularExpression)
+        // No space before closing punctuation.
+        result = result.replacingOccurrences(of: " +([,.!?;:])", with: "$1",
+                                             options: .regularExpression)
+        // Trim spaces around line breaks; cap blank runs at one empty line.
+        result = result.replacingOccurrences(of: " *\n *", with: "\n",
+                                             options: .regularExpression)
+        result = result.replacingOccurrences(of: "\n{3,}", with: "\n\n",
+                                             options: .regularExpression)
+        return result
+    }
+}
+
+private extension String {
+    /// First letter uppercased, rest untouched.
+    var capitalisedFirst: String {
+        guard let first = first else { return self }
+        return first.uppercased() + dropFirst()
     }
 }

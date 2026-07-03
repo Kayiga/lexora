@@ -373,3 +373,72 @@ final class HTMLExportServiceTests: XCTestCase {
         try? FileManager.default.removeItem(at: url)
     }
 }
+
+// MARK: - DictationFormatter Tests
+
+final class DictationFormatterTests: XCTestCase {
+
+    func testVerbatimIsUntouched() {
+        let raw = "hi john new line bullet point apples"
+        XCTAssertEqual(DictationFormatter.format(raw, mode: .verbatim), raw)
+    }
+
+    func testNewLineAndParagraphCommands() {
+        let out = DictationFormatter.format(
+            "first thought new line second thought new paragraph third", mode: .casual)
+        XCTAssertEqual(out, "first thought\nsecond thought\n\nthird")
+    }
+
+    func testBulletPoints() {
+        let out = DictationFormatter.format(
+            "shopping list bullet point apples bullet point oranges", mode: .casual)
+        XCTAssertEqual(out, "shopping list\n• apples\n• oranges")
+    }
+
+    func testNumberedList() {
+        let out = DictationFormatter.format(
+            "agenda next number budget next number hiring next number roadmap",
+            mode: .casual)
+        XCTAssertEqual(out, "agenda\n1. budget\n2. hiring\n3. roadmap")
+    }
+
+    func testCommandsSwallowAdjacentPunctuation() {
+        let out = DictationFormatter.format(
+            "Done here. New line, next item", mode: .casual)
+        XCTAssertEqual(out, "Done here\nnext item")
+    }
+
+    func testProfessionalCapitalisation() {
+        let out = DictationFormatter.format(
+            "we shipped it. it works now. what a day", mode: .professional)
+        XCTAssertEqual(out, "We shipped it. It works now. What a day")
+    }
+
+    func testProfessionalBulletCapitalisation() {
+        let out = DictationFormatter.format(
+            "plan bullet point review numbers bullet point send update",
+            mode: .professional)
+        XCTAssertEqual(out, "Plan\n• Review numbers\n• Send update")
+    }
+
+    func testEmailGreetingAndSignoff() {
+        let out = DictationFormatter.format(
+            "hi sarah thanks for the update on the launch. best regards john",
+            mode: .email)
+        XCTAssertEqual(out, "Hi sarah,\n\nThanks for the update on the launch.\n\nBest regards,\nJohn")
+    }
+
+    func testEmailSubjectLine() {
+        let out = DictationFormatter.format(
+            "subject launch update. hi team the launch is on track",
+            mode: .email)
+        XCTAssertTrue(out.hasPrefix("Subject: Launch update\n\n"), "got: \(out)")
+        XCTAssertTrue(out.contains("Hi team,\n\n"), "got: \(out)")
+    }
+
+    func testWhitespaceHygiene() {
+        let out = DictationFormatter.format(
+            "hello  world , this is   fine .", mode: .professional)
+        XCTAssertEqual(out, "Hello world, this is fine.")
+    }
+}

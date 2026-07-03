@@ -204,6 +204,7 @@ enum FormalityMode: String, Codable, CaseIterable {
     case casual        = "Casual"
     case adaptive      = "Adaptive"
     case professional  = "Professional"
+    case email         = "Email"
     case verbatim      = "Verbatim"
 
     var description: String {
@@ -211,6 +212,7 @@ enum FormalityMode: String, Codable, CaseIterable {
         case .casual:       return "Relaxed, conversational output"
         case .adaptive:     return "Matches the context automatically"
         case .professional: return "Formal, punctuated prose"
+        case .email:        return "Structured email: greeting, paragraphs, sign-off"
         case .verbatim:     return "Exactly as spoken, including fillers"
         }
     }
