@@ -22,6 +22,9 @@ final class SpeechEngine {
     var permissionStatus: SFSpeechRecognizerAuthorizationStatus = .notDetermined
     /// The most recently completed session — read by the recording view to show post-session stats.
     var lastFinishedSession: TranscriptionSession?
+    /// Which transcription engine the current/last session used — surfaced in
+    /// Settings → About so engine fallbacks are visible instead of silent.
+    var activeEngineDescription: String = "—"
 
     // MARK: - Callbacks
     var onTranscriptUpdate: (@MainActor (String, Double) -> Void)?
@@ -94,6 +97,34 @@ final class SpeechEngine {
         self.languageIntelligence = languageIntelligence
         self.learningEngine = learningEngine
         subscribeToAudioSessionNotifications()
+        runEngineSelfTestIfRequested()
+    }
+
+    /// Diagnostics: `LEXORA_ENGINE_SELFTEST=1` in the environment makes the app
+    /// try to construct the modern transcription pipeline at launch and log the
+    /// outcome to the unified log — readable via `log show` without recording.
+    private func runEngineSelfTestIfRequested() {
+        guard ProcessInfo.processInfo.environment["LEXORA_ENGINE_SELFTEST"] == "1" else { return }
+#if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            Task { [weak self] in
+                self?.slog("SELFTEST: building modern pipeline for en-US…")
+                let core = await ModernTranscribeCore.make(
+                    localeIdentifier: "en-US",
+                    onResult: { _, _ in },
+                    log: { line in
+                        Task { @MainActor [weak self] in self?.slog("SELFTEST: \(line)") }
+                    }
+                )
+                self?.slog("SELFTEST result: \(core == nil ? "FAILED → would fall back to legacy" : "OK — modern engine constructs")")
+                if let core { await core.finishAndTearDown() }
+            }
+        } else {
+            slog("SELFTEST: iOS < 26 — modern engine unavailable")
+        }
+#else
+        slog("SELFTEST: built without iOS 26 SDK — modern engine not compiled in")
+#endif
     }
 
     deinit {
@@ -335,7 +366,10 @@ final class SpeechEngine {
             )
         }
 #endif
-        slog("startListening lang=\(targetLanguage) engine=\(modernCore != nil ? "SpeechAnalyzer(iOS26)" : "SFSpeechRecognizer+rotation \(rotationSoftInterval)-\(rotationHardInterval)s")")
+        activeEngineDescription = modernCore != nil
+            ? "SpeechAnalyzer (modern)"
+            : "SFSpeechRecognizer (legacy)"
+        slog("startListening lang=\(targetLanguage) engine=\(activeEngineDescription)")
 
         currentSession = TranscriptionSession(
             contextProfileID: contextProfileID,
@@ -822,15 +856,22 @@ final class ModernTranscribeCore: @unchecked Sendable {
         let locale = Locale(identifier: localeIdentifier)
 
         let supported = await SpeechTranscriber.supportedLocales
-        guard supported.contains(where: {
-            $0.identifier(.bcp47).lowercased() == locale.identifier(.bcp47).lowercased()
-        }) else {
+        log("SpeechTranscriber: \(supported.count) supported locales: \(supported.prefix(30).map { $0.identifier(.bcp47) }.joined(separator: ","))")
+
+        // Exact match first, then language-only (e.g. "en-GB" → any "en-*").
+        let wantedTag = locale.identifier(.bcp47).lowercased()
+        let wantedLang = wantedTag.split(separator: "-").first.map(String.init) ?? wantedTag
+        let matched = supported.first(where: { $0.identifier(.bcp47).lowercased() == wantedTag })
+            ?? supported.first(where: {
+                $0.identifier(.bcp47).lowercased().split(separator: "-").first.map(String.init) == wantedLang
+            })
+        guard let matchedLocale = matched else {
             log("SpeechTranscriber: locale \(localeIdentifier) unsupported → legacy")
             return nil
         }
 
         let transcriber = SpeechTranscriber(
-            locale: locale,
+            locale: matchedLocale,
             transcriptionOptions: [],
             reportingOptions: [.volatileResults],
             attributeOptions: []

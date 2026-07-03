@@ -1089,6 +1089,13 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .font(.caption.monospacedDigit())
             }
+            // Which transcription engine the last recording used — makes a
+            // silent fallback to the legacy engine visible at a glance.
+            LabeledContent("Speech engine") {
+                Text(appState.speechEngine.activeEngineDescription)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
             NavigationLink {
                 WhatsNewView()
             } label: {

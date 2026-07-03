@@ -51,6 +51,9 @@ class KeyboardViewController: UIInputViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Custom-height keyboards must opt into self-sizing, otherwise the
+        // system keeps its own height and the layout renders squashed.
+        (view as? UIInputView)?.allowsSelfSizing = true
         setupKeyboardUI()
         subscribeToAudioInterruptions()
     }
