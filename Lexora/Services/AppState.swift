@@ -111,6 +111,12 @@ final class AppState {
             )
             // Cancel the streak-at-risk nudge — user has now recorded today.
             notifications.cancelStreakAtRisk()
+            // Hand the transcript to the keyboard extension: iOS's keyboard
+            // sandbox blocks the mic (TCC grants it, the sandbox refuses the
+            // extension), so the keyboard offers "insert your latest Lexora
+            // dictation" instead of recording itself.
+            Self.writeKeyboardHandoff(transcript: taggedSession.finalTranscript,
+                                      language: taggedSession.primaryLanguage)
             // Prompt for App Store review at meaningful milestones.
             requestReviewIfAppropriate()
         }
@@ -124,6 +130,27 @@ final class AppState {
 
         // Import any sessions saved by the Lexora Keyboard extension.
         importPendingKeyboardSessions()
+    }
+
+    // MARK: - Keyboard Handoff (app → keyboard)
+
+    /// Writes the most recent transcript to the App Group so the keyboard can
+    /// insert it into any app ("dictate in Lexora, insert from the keyboard").
+    static func writeKeyboardHandoff(transcript: String, language: String) {
+        let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty,
+              let container = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: "group.com.yiga.Lexora")
+        else { return }
+        struct Handoff: Codable {
+            var transcript: String
+            var language: String
+            var createdAt: Date
+        }
+        let handoff = Handoff(transcript: text, language: language, createdAt: Date())
+        if let data = try? JSONEncoder().encode(handoff) {
+            try? data.write(to: container.appendingPathComponent("handoff_latest.json"))
+        }
     }
 
     // MARK: - Keyboard Extension Session Import

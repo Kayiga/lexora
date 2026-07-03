@@ -52,11 +52,14 @@ class KeyboardViewController: UIInputViewController {
     private var currentText = ""
     private var selectedLanguage = "en-US"
     private var signalLevel: Float = 0
+    /// Latest transcript dictated in the main Lexora app (App Group handoff) —
+    /// offered as one-tap insert because iOS's keyboard sandbox blocks the mic.
+    private var handoffText: String?
 
     private lazy var profile: KeyboardProfile = loadProfile()
 
     /// Shown in the UI so a stale cached keyboard binary is instantly visible.
-    static let keyboardBuildTag = "kb-4"
+    static let keyboardBuildTag = "kb-5"
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -91,7 +94,62 @@ class KeyboardViewController: UIInputViewController {
         super.viewWillAppear(animated)
         profile = loadProfile()
         selectedLanguage = profile.detectedPrimaryLanguage
+        handoffText = loadHandoff()
         rebuildUI()
+    }
+
+    // MARK: - App → keyboard handoff
+
+    private struct Handoff: Codable {
+        var transcript: String
+        var language: String
+        var createdAt: Date
+    }
+
+    private var handoffURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("handoff_latest.json")
+    }
+
+    /// Most recent dictation from the main app, if reasonably fresh (< 30 min).
+    private func loadHandoff() -> String? {
+        guard let url = handoffURL,
+              let data = try? Data(contentsOf: url),
+              let handoff = try? JSONDecoder().decode(Handoff.self, from: data),
+              Date().timeIntervalSince(handoff.createdAt) < 30 * 60,
+              !handoff.transcript.isEmpty
+        else { return nil }
+        return handoff.transcript
+    }
+
+    private func insertHandoff() {
+        guard let text = handoffText else { return }
+        insertText(text + " ")
+        handoffText = nil
+        if let url = handoffURL { try? FileManager.default.removeItem(at: url) }
+        if profile.hapticFeedbackEnabled {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+        rebuildUI()
+    }
+
+    /// Best-effort jump to the Lexora app (responder-chain openURL — the only
+    /// route available to keyboard extensions; harmless no-op if blocked).
+    private func openLexoraApp() {
+        guard let url = URL(string: "lexora://record") else { return }
+        // Keyboard extensions have no UIApplication; walk the responder chain to
+        // whatever host object implements openURL: (works on current iOS).
+        let selector = NSSelectorFromString("openURL:")
+        var responder: UIResponder? = self
+        while let r = responder {
+            if r.responds(to: selector) {
+                r.perform(selector, with: url)
+                return
+            }
+            responder = r.next
+        }
+        extensionContext?.open(url)
     }
 
     // MARK: - UI
@@ -131,6 +189,9 @@ class KeyboardViewController: UIInputViewController {
                 self?.selectedLanguage = lang
                 self?.rebuildUI()
             },
+            onInsertHandoff:   { [weak self] in self?.insertHandoff() },
+            onOpenLexora:      { [weak self] in self?.openLexoraApp() },
+            handoffPreview:     handoffText,
             isListening:        Binding(get: { [weak self] in self?.isListening ?? false }, set: { _ in }),
             currentTranscript:  Binding(get: { [weak self] in self?.currentText ?? "" }, set: { _ in }),
             selectedLanguage:   Binding(get: { [weak self] in self?.selectedLanguage ?? "en-US" }, set: { _ in }),
@@ -189,7 +250,7 @@ class KeyboardViewController: UIInputViewController {
             // is exactly what device logs showed. playAndRecord establishes a
             // valid duplex route so the audio unit can start.
             try session.setCategory(.playAndRecord, mode: .default,
-                                    options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
+                                    options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
             klog("audio session active (playAndRecord)")
 
@@ -261,9 +322,18 @@ class KeyboardViewController: UIInputViewController {
             }
             rebuildUI()
         } catch {
-            // Surface the failure — a silent catch here looked like a dead mic button.
             klog("audio start FAILED: \(error.localizedDescription)")
-            currentText = "Couldn't start the microphone (\(error.localizedDescription)). Record once in the Lexora app, then try again."
+            // 'what' (2003329396) = the keyboard SANDBOX refuses mic IO on this
+            // iOS version even though permissions are granted (verified via TCC
+            // logs: authValue=2 but "Failed to issue generic sandbox extension").
+            // Offer the handoff flow instead of a dead end.
+            if (error as NSError).code == 2003329396 {
+                currentText = "iOS doesn't allow keyboards to use the microphone on this version. Dictate in the Lexora app — your text will appear here for one-tap insert."
+                openLexoraApp()
+            } else {
+                currentText = "Couldn't start the microphone (\(error.localizedDescription)). Record once in the Lexora app, then try again."
+            }
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             rebuildUI()
         }
     }
@@ -378,6 +448,10 @@ struct KeyboardRootView: View {
     var onNextKeyboard:    () -> Void
     var onSaveToLexora:    () -> Void
     var onLanguageChanged: (String) -> Void
+    var onInsertHandoff:   () -> Void
+    var onOpenLexora:      () -> Void
+    /// Latest dictation from the Lexora app, offered for one-tap insertion.
+    var handoffPreview: String?
 
     @Binding var isListening:       Bool
     @Binding var currentTranscript: String
@@ -425,7 +499,29 @@ struct KeyboardRootView: View {
                 .padding(.top, 10)
 
             VStack(alignment: .leading, spacing: 4) {
-                if currentTranscript.isEmpty {
+                if currentTranscript.isEmpty, let handoff = handoffPreview, !isListening {
+                    // A dictation from the Lexora app is waiting — one-tap insert.
+                    Button(action: onInsertHandoff) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.down.doc.fill")
+                                .foregroundStyle(Color.accentColor)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Insert your Lexora dictation")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Text(handoff)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                } else if currentTranscript.isEmpty {
                     // Placeholder / waveform animation
                     HStack(spacing: 2) {
                         if isListening {

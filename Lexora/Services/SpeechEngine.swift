@@ -112,8 +112,8 @@ final class SpeechEngine {
                 let core = await ModernTranscribeCore.make(
                     localeIdentifier: "en-US",
                     onResult: { _, _ in },
-                    log: { line in
-                        Task { @MainActor [weak self] in self?.slog("SELFTEST: \(line)") }
+                    log: { [weak self] line in
+                        Task { @MainActor in self?.slog("SELFTEST: \(line)") }
                     }
                 )
                 self?.slog("SELFTEST result: \(core == nil ? "FAILED → would fall back to legacy" : "OK — modern engine constructs")")
