@@ -74,6 +74,14 @@ final class AppState {
         // This closure handles UI state and cloud upload only.
         se.onSessionFinished = { [weak self] session in
             guard let self else { return }
+            // End the Live Activity HERE — the one point every stop path hits.
+            // The engine can stop itself (silence auto-stop, phone-call
+            // interruption, headphones unplugged); those never went through
+            // stopRecording(), so the Dynamic Island kept ticking forever.
+            activityUpdateTask?.cancel()
+            activityUpdateTask = nil
+            liveActivity.end(wordCount: session.wordCount,
+                             detectedLanguage: session.primaryLanguage)
             // Apply template auto-tags if a template was active when recording started.
             var taggedSession = session
             for tag in pendingTemplateTags {
@@ -219,11 +227,18 @@ final class AppState {
         try await speechEngine.startListening(language: language, contextProfileID: contextProfileID)
         // Kick off Live Activity on devices that support it.
         liveActivity.start(sessionID: UUID())
-        // Push a state update every second while recording.
+        // Keep the Live Activity in sync once a second for the whole session,
+        // INCLUDING pauses — the old loop exited on the first pause, so after
+        // a resume the island froze, and engine-initiated pauses (phone call,
+        // route change) were never reflected at all. The service dedupes, so
+        // unchanged states cost nothing. The loop ends when the session does
+        // (onSessionFinished cancels the task and ends the activity).
         activityUpdateTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
-                guard let self, !Task.isCancelled, speechEngine.isListening else { break }
+                guard let self, !Task.isCancelled else { break }
+                // Fully stopped (not paused) → session is finalising; loop ends.
+                if !speechEngine.isListening && !speechEngine.isPaused { break }
                 let wordCount = speechEngine.currentTranscript
                     .split(whereSeparator: { $0.isWhitespace }).count
                 liveActivity.update(
