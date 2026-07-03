@@ -56,7 +56,7 @@ class KeyboardViewController: UIInputViewController {
     private lazy var profile: KeyboardProfile = loadProfile()
 
     /// Shown in the UI so a stale cached keyboard binary is instantly visible.
-    static let keyboardBuildTag = "kb-3"
+    static let keyboardBuildTag = "kb-4"
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -183,8 +183,15 @@ class KeyboardViewController: UIInputViewController {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            // .playAndRecord, NOT .record: in a keyboard extension a record-only
+            // session gets no output route — the IO unit then reports "output HW
+            // 0 Hz" and AUIOClient_StartIO fails with 'what' (2003329396), which
+            // is exactly what device logs showed. playAndRecord establishes a
+            // valid duplex route so the audio unit can start.
+            try session.setCategory(.playAndRecord, mode: .default,
+                                    options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
+            klog("audio session active (playAndRecord)")
 
             recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
             guard let request = recognitionRequest else { return }
