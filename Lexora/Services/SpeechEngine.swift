@@ -320,6 +320,7 @@ final class SpeechEngine {
         // unlimited live dictation. Falls back to legacy SFSpeechRecognizer with
         // pause-aware rotation when unavailable (older iOS / unsupported locale).
         modernCore = nil
+#if compiler(>=6.2)   // SpeechAnalyzer needs the iOS 26 SDK (Xcode 26+)
         if #available(iOS 26.0, *) {
             modernCore = await ModernTranscribeCore.make(
                 localeIdentifier: targetLanguage,
@@ -333,6 +334,7 @@ final class SpeechEngine {
                 }
             )
         }
+#endif
         slog("startListening lang=\(targetLanguage) engine=\(modernCore != nil ? "SpeechAnalyzer(iOS26)" : "SFSpeechRecognizer+rotation \(rotationSoftInterval)-\(rotationHardInterval)s")")
 
         currentSession = TranscriptionSession(
@@ -377,10 +379,12 @@ final class SpeechEngine {
         // Tear down the modern engine (if active). Finalisation is async but the
         // volatile window is banked synchronously below, so nothing is lost even
         // if the analyzer never delivers another result.
+#if compiler(>=6.2)
         if #available(iOS 26.0, *), let core = modernCore as? ModernTranscribeCore {
             modernCore = nil
             Task.detached { await core.finishAndTearDown() }
         }
+#endif
 
         // Bank the current window so the words spoken since the last rotation
         // are part of the final transcript even if no further callback arrives.
@@ -530,11 +534,15 @@ final class SpeechEngine {
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             guard let self else { return }
+#if compiler(>=6.2)
             if #available(iOS 26.0, *), let core = self.modernCore as? ModernTranscribeCore {
                 core.feed(buffer)
             } else {
                 self.recognitionRequest?.append(buffer)
             }
+#else
+            self.recognitionRequest?.append(buffer)
+#endif
             self.updateSignalLevel(buffer: buffer)
         }
 
@@ -774,6 +782,7 @@ enum SpeechError: LocalizedError {
 
 // MARK: - Modern Transcription Core (iOS 26+, SpeechAnalyzer / SpeechTranscriber)
 
+#if compiler(>=6.2)   // types exist only in the iOS 26 SDK (Xcode 26+); older toolchains build the legacy engine only
 /// Wraps Apple's SpeechAnalyzer pipeline — the API purpose-built for unlimited
 /// live dictation. Unlike SFSpeechRecognizer there is NO ~1-minute request cap,
 /// no silent stalls at ~180-230 words, and results come as a clean
@@ -907,3 +916,4 @@ final class ModernTranscribeCore: @unchecked Sendable {
         resultsTask = nil
     }
 }
+#endif   // compiler(>=6.2)
