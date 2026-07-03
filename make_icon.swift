@@ -1,156 +1,114 @@
 #!/usr/bin/env swift
+// Lexora app icon — glowing spectral waveform on deep space-violet.
+// Regenerate: swift make_icon.swift "Lexora/Assets.xcassets/AppIcon.appiconset/icon_1024.png"
 import CoreGraphics
 import ImageIO
 import Foundation
 
 func makeIcon(size: Int) -> CGImage {
     let cs = CGColorSpaceCreateDeviceRGB()
+    // noneSkipLast → fully opaque PNG (App Store icons must have no alpha).
     let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8,
-                       bytesPerRow: size * 4, space: cs,
-                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                        bytesPerRow: size * 4, space: cs,
+                        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     let s = CGFloat(size)
     let cx = s / 2
+    let cy = s / 2
 
-    // ── Background gradient ──────────────────────────────────────────
-    let g = CGGradient(
-        colorsSpace: cs,
-        colors: [
-            CGColor(srgbRed: 0.29, green: 0.11, blue: 0.78, alpha: 1),   // deep violet
-            CGColor(srgbRed: 0.56, green: 0.18, blue: 0.82, alpha: 1),   // purple
-        ] as CFArray,
-        locations: [0, 1]
-    )!
-    ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: s), end: CGPoint(x: s, y: 0), options: [])
+    // ── Background: deep indigo → rich violet, diagonal ──────────────────
+    let bg = CGGradient(colorsSpace: cs, colors: [
+        CGColor(srgbRed: 0.055, green: 0.012, blue: 0.16, alpha: 1),   // near-black indigo
+        CGColor(srgbRed: 0.16,  green: 0.05,  blue: 0.38, alpha: 1),   // deep violet
+        CGColor(srgbRed: 0.30,  green: 0.10,  blue: 0.58, alpha: 1),   // royal purple
+    ] as CFArray, locations: [0, 0.55, 1])!
+    ctx.drawLinearGradient(bg,
+        start: CGPoint(x: 0, y: 0),
+        end:   CGPoint(x: s, y: s), options: [])
 
-    // Subtle inner glow at top
-    let glow = CGGradient(
-        colorsSpace: cs,
-        colors: [
-            CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.12),
-            CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0),
-        ] as CFArray,
-        locations: [0, 1]
-    )!
-    ctx.drawRadialGradient(glow,
-        startCenter: CGPoint(x: cx, y: s * 0.75), startRadius: 0,
-        endCenter:   CGPoint(x: cx, y: s * 0.75), endRadius: s * 0.55,
-        options: [])
+    // Aurora glow behind the glyph (violet core fading out)
+    let aura = CGGradient(colorsSpace: cs, colors: [
+        CGColor(srgbRed: 0.55, green: 0.30, blue: 1.0, alpha: 0.55),
+        CGColor(srgbRed: 0.40, green: 0.15, blue: 0.85, alpha: 0.18),
+        CGColor(srgbRed: 0.30, green: 0.10, blue: 0.60, alpha: 0.0),
+    ] as CFArray, locations: [0, 0.5, 1])!
+    ctx.drawRadialGradient(aura,
+        startCenter: CGPoint(x: cx, y: cy), startRadius: 0,
+        endCenter:   CGPoint(x: cx, y: cy), endRadius: s * 0.62, options: [])
 
-    let white = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    // Gentle vignette so corners recede
+    let vig = CGGradient(colorsSpace: cs, colors: [
+        CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.0),
+        CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.28),
+    ] as CFArray, locations: [0.62, 1])!
+    ctx.drawRadialGradient(vig,
+        startCenter: CGPoint(x: cx, y: cy), startRadius: 0,
+        endCenter:   CGPoint(x: cx, y: cy), endRadius: s * 0.78,
+        options: .drawsAfterEndLocation)
 
-    // ── Microphone body (capsule) ────────────────────────────────────
-    let mW: CGFloat = s * 0.175
-    let mH: CGFloat = s * 0.28
-    let mCX = cx
-    let mCY = s * 0.57               // body centre (y-up)
-    let mR  = mW / 2
-
-    let bodyPath = CGPath(roundedRect:
-        CGRect(x: mCX - mW/2, y: mCY - mH/2, width: mW, height: mH),
-        cornerWidth: mR, cornerHeight: mR, transform: nil)
-    ctx.setFillColor(white)
-    ctx.addPath(bodyPath)
-    ctx.fillPath()
-
-    // Grille lines across body
-    ctx.setStrokeColor(CGColor(srgbRed: 0.35, green: 0.15, blue: 0.75, alpha: 0.25))
-    ctx.setLineWidth(s * 0.0065)
-    for f: CGFloat in [-0.17, 0, 0.17] {
-        let y = mCY + mH * f
-        let inset = sqrt(max(0, mR * mR - (y - mCY - mH/2 + mR) * (y - mCY - mH/2 + mR)))
-        let lx = mCX - mW * 0.38
-        let rx = mCX + mW * 0.38
-        ctx.move(to: CGPoint(x: lx, y: y))
-        ctx.addLine(to: CGPoint(x: rx, y: y))
-        ctx.strokePath()
+    // Sparse starfield — tiny, deterministic
+    var seed: UInt64 = 0x1EC0DA
+    func rand() -> CGFloat {
+        seed = seed &* 6364136223846793005 &+ 1442695040888963407
+        return CGFloat((seed >> 33) & 0xFFFFFF) / CGFloat(0xFFFFFF)
+    }
+    for _ in 0..<26 {
+        let x = rand() * s, y = rand() * s
+        let dx = abs(x - cx) / s, dy = abs(y - cy) / s
+        guard dx > 0.26 || dy > 0.30 else { continue }     // keep clear of the glyph
+        let r = s * (0.0012 + rand() * 0.0028)
+        ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1,
+                                 alpha: 0.10 + rand() * 0.22))
+        ctx.fillEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
     }
 
-    // ── Stand: U-shaped arc + vertical stem + base ───────────────────
-    ctx.setStrokeColor(white)
-    ctx.setLineWidth(s * 0.022)
-    ctx.setLineCap(.round)
+    // ── Waveform glyph: 7 rounded bars, voice-envelope heights ───────────
+    let heights: [CGFloat] = [0.13, 0.25, 0.38, 0.52, 0.38, 0.25, 0.13]
+    let barW = s * 0.062
+    let gap  = s * 0.036
+    let totalW = barW * CGFloat(heights.count) + gap * CGFloat(heights.count - 1)
+    var x0 = cx - totalW / 2
 
-    let arcCY = mCY - mH / 2          // arc centre = bottom of body
-    let arcR:  CGFloat = s * 0.14
+    let bars = CGMutablePath()
+    for h in heights {
+        let bh = s * h
+        bars.addRoundedRect(in: CGRect(x: x0, y: cy - bh / 2, width: barW, height: bh),
+                            cornerWidth: barW / 2, cornerHeight: barW / 2)
+        x0 += barW + gap
+    }
 
-    // U-arc: from left (π) clockwise through bottom to right (0)
-    ctx.addArc(center: CGPoint(x: mCX, y: arcCY),
-               radius: arcR,
-               startAngle: .pi, endAngle: 0,
-               clockwise: true)
-    ctx.strokePath()
+    // Glow pass: bars drawn with a heavy violet-pink shadow (twice for strength)
+    for blur in [s * 0.085, s * 0.035] {
+        ctx.saveGState()
+        ctx.setShadow(offset: .zero, blur: blur,
+                      color: CGColor(srgbRed: 0.75, green: 0.45, blue: 1.0, alpha: 0.85))
+        ctx.addPath(bars)
+        ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
+        ctx.fillPath()
+        ctx.restoreGState()
+    }
 
-    // Vertical stem
-    let stemTop    = arcCY - arcR
-    let stemBottom = stemTop - s * 0.035
-    ctx.move(to: CGPoint(x: mCX, y: stemTop))
-    ctx.addLine(to: CGPoint(x: mCX, y: stemBottom))
-    ctx.strokePath()
-
-    // Horizontal base
-    let baseHalfW: CGFloat = s * 0.105
-    ctx.move(to: CGPoint(x: mCX - baseHalfW, y: stemBottom))
-    ctx.addLine(to: CGPoint(x: mCX + baseHalfW, y: stemBottom))
-    ctx.strokePath()
-
-    // ── Lips / Mouth ─────────────────────────────────────────────────
-    let lipsY:  CGFloat = stemBottom - s * 0.095   // lips centre
-    let lW:     CGFloat = s * 0.285
-    let lH:     CGFloat = s * 0.095
-
-    let lL = CGPoint(x: cx - lW/2, y: lipsY)       // left corner
-    let lR = CGPoint(x: cx + lW/2, y: lipsY)       // right corner
-    let lMid = CGPoint(x: cx, y: lipsY + lH * 0.22)  // centre of cupid's bow dip
-    let lPkL = CGPoint(x: cx - lW * 0.22, y: lipsY + lH * 0.62)  // left peak
-    let lPkR = CGPoint(x: cx + lW * 0.22, y: lipsY + lH * 0.62)  // right peak
-    let lBot = CGPoint(x: cx, y: lipsY - lH * 0.55) // lower lip bottom
-
-    // Full lips path
-    let lips = CGMutablePath()
-    // Upper lip (cupid's bow)
-    lips.move(to: lL)
-    lips.addCurve(to: lPkL,
-        control1: CGPoint(x: cx - lW * 0.44, y: lipsY + lH * 0.25),
-        control2: CGPoint(x: cx - lW * 0.33, y: lipsY + lH * 0.62))
-    lips.addCurve(to: lMid,
-        control1: CGPoint(x: cx - lW * 0.10, y: lipsY + lH * 0.60),
-        control2: CGPoint(x: cx - lW * 0.04, y: lipsY + lH * 0.22))
-    lips.addCurve(to: lPkR,
-        control1: CGPoint(x: cx + lW * 0.04, y: lipsY + lH * 0.22),
-        control2: CGPoint(x: cx + lW * 0.10, y: lipsY + lH * 0.60))
-    lips.addCurve(to: lR,
-        control1: CGPoint(x: cx + lW * 0.33, y: lipsY + lH * 0.62),
-        control2: CGPoint(x: cx + lW * 0.44, y: lipsY + lH * 0.25))
-    // Lower lip
-    lips.addCurve(to: lBot,
-        control1: CGPoint(x: cx + lW * 0.44, y: lipsY - lH * 0.08),
-        control2: CGPoint(x: cx + lW * 0.16, y: lipsY - lH * 0.58))
-    lips.addCurve(to: lL,
-        control1: CGPoint(x: cx - lW * 0.16, y: lipsY - lH * 0.58),
-        control2: CGPoint(x: cx - lW * 0.44, y: lipsY - lH * 0.08))
-    lips.closeSubpath()
-
-    // Fill lips with coral-pink
-    ctx.addPath(lips)
-    ctx.setFillColor(CGColor(srgbRed: 1.0, green: 0.42, blue: 0.52, alpha: 1))
-    ctx.fillPath()
-
-    // Lip centre line (parting)
-    let partition = CGMutablePath()
-    partition.move(to: lL)
-    partition.addCurve(to: lR,
-        control1: CGPoint(x: cx - lW * 0.12, y: lipsY + lH * 0.12),
-        control2: CGPoint(x: cx + lW * 0.12, y: lipsY + lH * 0.12))
-    ctx.addPath(partition)
-    ctx.setStrokeColor(CGColor(srgbRed: 0.80, green: 0.22, blue: 0.38, alpha: 1))
-    ctx.setLineWidth(s * 0.011)
-    ctx.setLineCap(.round)
-    ctx.strokePath()
-
-    // Highlight on upper lip
-    ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.28))
-    ctx.fillEllipse(in: CGRect(x: cx - lW * 0.10, y: lipsY + lH * 0.12,
-                                width: lW * 0.20, height: lH * 0.25))
+    // Spectral fill: aqua → ice white → pink swept across the bars
+    ctx.saveGState()
+    ctx.addPath(bars)
+    ctx.clip()
+    let spectral = CGGradient(colorsSpace: cs, colors: [
+        CGColor(srgbRed: 0.42, green: 0.88, blue: 1.0,  alpha: 1),   // aqua
+        CGColor(srgbRed: 0.88, green: 0.92, blue: 1.0,  alpha: 1),   // ice white
+        CGColor(srgbRed: 1.0,  green: 0.55, blue: 0.85, alpha: 1),   // pink
+    ] as CFArray, locations: [0, 0.5, 1])!
+    ctx.drawLinearGradient(spectral,
+        start: CGPoint(x: cx - totalW / 2, y: cy - s * 0.10),
+        end:   CGPoint(x: cx + totalW / 2, y: cy + s * 0.10), options: [])
+    // Vertical sheen so the bars feel dimensional
+    let sheen = CGGradient(colorsSpace: cs, colors: [
+        CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.0),
+        CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.35),
+        CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.0),
+    ] as CFArray, locations: [0, 0.5, 1])!
+    ctx.drawLinearGradient(sheen,
+        start: CGPoint(x: cx, y: cy - s * 0.30),
+        end:   CGPoint(x: cx, y: cy + s * 0.30), options: [])
+    ctx.restoreGState()
 
     return ctx.makeImage()!
 }
