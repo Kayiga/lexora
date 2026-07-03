@@ -3,6 +3,7 @@ import Observation
 import Speech
 import AVFoundation
 import Combine
+import os
 
 // The heart of Lexora. Wraps SFSpeechRecognizer with adaptive intelligence:
 // continuous language detection, real-time confidence tracking, and pause-pattern learning.
@@ -61,7 +62,14 @@ final class SpeechEngine {
     // ~1 minute and often stops WITHOUT a final/error callback. We proactively
     // rotate the request before that cap so dictation continues indefinitely.
     private var rotationTask: Task<Void, Never>?
-    private let rotationInterval: TimeInterval = 45
+    /// From this age on, the request is rotated at the FIRST detected speech pause
+    /// (so no words are in flight when the old task is cancelled).
+    private let rotationSoftInterval: TimeInterval = 35
+    /// Absolute request age limit — rotate even mid-speech rather than risk
+    /// SFSpeechRecognizer's silent ~1-minute stop.
+    private let rotationHardInterval: TimeInterval = 55
+    /// Gap since the last recognised word that counts as a speech pause.
+    private let rotationPauseThreshold: TimeInterval = 0.7
     /// The current request's latest hypothesis (used as a fallback when draining).
     @ObservationIgnored private var latestSegmentText = ""
     @ObservationIgnored private var latestSegments: [TranscriptSegment] = []
@@ -70,20 +78,9 @@ final class SpeechEngine {
     // so its final result — including the half-second tail spoken right before the
     // handoff — gets committed, while a NEW request immediately takes over the
     // live audio. Without this, those tail words were dropped at every rotation.
-    @ObservationIgnored private var drainingRequestID: UUID?
-    @ObservationIgnored private var drainingTask: SFSpeechRecognitionTask?
-    // Keeps the OUTGOING recognizer alive while its task drains. Each request
-    // gets its own SFSpeechRecognizer (see makeRecognitionRequestAndTask) —
-    // one recognizer will not run a second concurrent task, which froze all
-    // new text after the first 45s rotation.
-    @ObservationIgnored private var drainingRecognizer: SFSpeechRecognizer?
-    // Snapshot of committedTranscript/Segments taken JUST BEFORE this drain's
-    // provisional text was appended. If the drain later delivers a fuller final,
-    // we rebuild committed = base + final to recover the tail. If it never does,
-    // the provisional text already banked at rotation stays — so nothing is lost.
-    @ObservationIgnored private var drainBaseTranscript = ""
-    @ObservationIgnored private var drainBaseSegments: [TranscriptSegment] = []
-    @ObservationIgnored private var drainProvisionalText = ""
+    /// When the current recognition request started (set at start + each rotation).
+    /// Drives the pause-aware rotation timer.
+    @ObservationIgnored private var currentRequestStartedAt = Date()
 
     init(languageIntelligence: LanguageIntelligence, learningEngine: LearningEngine) {
         self.languageIntelligence = languageIntelligence
@@ -179,62 +176,52 @@ final class SpeechEngine {
 
     // MARK: - Long-dictation rotation
 
-    /// Restarts the recognition request every `rotationInterval` seconds so we
-    /// stay under SFSpeechRecognizer's ~1-minute single-request cap (which
-    /// otherwise silently stops transcription mid-dictation, ~75 words in).
+    /// Pause-aware rotation loop. SFSpeechRecognizer silently stops a single
+    /// request after ~1 minute, so the request must be restarted periodically.
+    /// From `rotationSoftInterval` on, we rotate at the FIRST detected pause in
+    /// speech (nothing is mid-air, so cancelling the old task loses nothing);
+    /// at `rotationHardInterval` we rotate regardless.
     private func startRotationTimer() {
         rotationTask?.cancel()
         rotationTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(self?.rotationInterval ?? 45))
+                try? await Task.sleep(for: .milliseconds(500))
                 guard let self, isListening, !Task.isCancelled else { break }
-                rotateRecognitionRequest()
+                let age = Date().timeIntervalSince(currentRequestStartedAt)
+                guard age >= rotationSoftInterval else { continue }
+                let pausedFor = Date().timeIntervalSince(lastWordTime ?? currentRequestStartedAt)
+                if pausedFor >= rotationPauseThreshold || age >= rotationHardInterval {
+                    rotateRecognitionRequest()
+                }
             }
         }
     }
 
-    /// Rotation with **commit-now, upgrade-on-final** banking.
-    ///
-    /// The old design waited for the drained request to deliver a `final` before
-    /// banking its minute of text. But SFSpeechRecognizer frequently stops a
-    /// request SILENTLY (no final, no error), so that text was never banked — and
-    /// when the next request finalised, the display collapsed to just its own
-    /// window, wiping everything before it (the "it deletes my text" bug).
-    ///
-    /// Now we bank the current window into `committedTranscript` IMMEDIATELY and
-    /// synchronously at the rotation moment, so it can never be lost. The drained
-    /// request keeps running only as a bonus: if it later delivers a fuller final
-    /// (with the half-second tail we didn't have yet), we UPGRADE the banked text.
+    /// **Cancel-based rotation with commit-now banking.** One recognition task
+    /// exists at any moment — device testing proved that ANY overlap of two
+    /// tasks (drain via endAudio, even on separate recognizer instances) starves
+    /// or freezes recognition. History:
+    ///  - wait-for-final banking → silent task death wiped whole minutes;
+    ///  - endAudio drain, shared recognizer → new task never got results;
+    ///  - endAudio drain, fresh recognizer → froze after a few rotations.
+    /// So: 1) bank the current window synchronously (can never be lost),
+    ///     2) CANCEL the old task outright (frees the recognizer immediately),
+    ///     3) start the replacement task on the same recognizer.
+    /// The pause-aware timer above makes the cancel land in a speech gap, so the
+    /// discarded in-flight tail is silence, not words.
     private func rotateRecognitionRequest() {
         guard isListening else { return }
-        slog("ROTATE (draining \(currentRequestID.uuidString.prefix(4)), banking=\"\(latestSegmentText.suffix(30))\")")
-        // A previous drain is still pending? Its provisional text is already safely
-        // banked; just retire it (its late final, if any, becomes stale/ignored).
-        clearDrainState()
+        slog("ROTATE \(currentRequestID.uuidString.prefix(4)) banking=\"\(latestSegmentText.suffix(30))\"")
 
-        if let oldReq = recognitionRequest, let task = recognitionTask {
-            // 1. Bank the current window NOW — guaranteed, before anything can stop.
-            drainBaseTranscript = committedTranscript
-            drainBaseSegments = committedSegments
-            drainProvisionalText = latestSegmentText
-            appendToCommitted(text: latestSegmentText, segments: latestSegments)
+        appendToCommitted(text: latestSegmentText, segments: latestSegments)
+        latestSegmentText = ""
+        latestSegments = []
 
-            drainingRequestID = currentRequestID
-            drainingTask = task
-            drainingRecognizer = recognizer   // keep the old recognizer alive for the drain
-            latestSegmentText = ""
-            latestSegments = []
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
 
-            // 2. Switch the tap to a fresh request FIRST (so no audio buffer lands on
-            //    the about-to-end request), THEN finalize the old one to capture its
-            //    tail. This keeps the audio handoff gapless.
-            makeRecognitionRequestAndTask()
-            oldReq.endAudio()
-        } else {
-            latestSegmentText = ""
-            latestSegments = []
-            makeRecognitionRequestAndTask()
-        }
+        makeRecognitionRequestAndTask()
     }
 
     /// Inserts a bookmark/marker into the transcript at the current spoken point.
@@ -256,28 +243,6 @@ final class SpeechEngine {
             ? text
             : committedTranscript + " " + text
         committedSegments += segments
-    }
-
-    /// A drained request delivered a final that's fuller than what we banked at
-    /// rotation — rebuild the banked text as (snapshot before drain) + (final) so
-    /// the tail is recovered. If the final isn't longer, the provisional stands.
-    private func upgradeDrainedCommit(finalText: String, segments: [SFTranscriptionSegment]) {
-        if finalText.count > drainProvisionalText.count {
-            committedTranscript = drainBaseTranscript.isEmpty
-                ? finalText
-                : drainBaseTranscript + " " + finalText
-            committedSegments = drainBaseSegments + makeSegments(segments)
-        }
-        clearDrainState()
-    }
-
-    private func clearDrainState() {
-        drainingRequestID = nil
-        drainingTask = nil
-        drainingRecognizer = nil
-        drainBaseTranscript = ""
-        drainBaseSegments = []
-        drainProvisionalText = ""
     }
 
     /// Maps recogniser segments to our model rows.
@@ -328,7 +293,7 @@ final class SpeechEngine {
 
         let targetLanguage = language ?? learningEngine.profile.detectedPrimaryLanguage
         try configureRecognizer(for: targetLanguage)
-        slog("startListening lang=\(targetLanguage) recognizer=\(recognizer?.locale.identifier ?? "nil") available=\(recognizer?.isAvailable ?? false) supportsOnDevice=\(recognizer?.supportsOnDeviceRecognition ?? false) rotation=\(rotationInterval)s")
+        slog("startListening lang=\(targetLanguage) recognizer=\(recognizer?.locale.identifier ?? "nil") available=\(recognizer?.isAvailable ?? false) supportsOnDevice=\(recognizer?.supportsOnDeviceRecognition ?? false) rotation=\(rotationSoftInterval)-\(rotationHardInterval)s")
 
         currentSession = TranscriptionSession(
             contextProfileID: contextProfileID,
@@ -340,7 +305,6 @@ final class SpeechEngine {
         committedSegments = []
         latestSegmentText = ""
         latestSegments = []
-        clearDrainState()
         wordTimestamps = []
 
         try await startAudioEngine()
@@ -369,9 +333,15 @@ final class SpeechEngine {
         recognitionTask?.cancel()
         recognitionRequest = nil
         recognitionTask = nil
-        // Retire any in-flight draining task too (its window is already banked).
-        drainingTask?.cancel()
-        clearDrainState()
+
+        // Bank the current window so the words spoken since the last rotation
+        // are part of the final transcript even if no further callback arrives.
+        appendToCommitted(text: latestSegmentText, segments: latestSegments)
+        latestSegmentText = ""
+        latestSegments = []
+        if committedTranscript.count > currentTranscript.count {
+            currentTranscript = committedTranscript
+        }
 
         // Deactivate the audio session off the main thread (otherwise the
         // blocking setActive(false) freezes the UI — this was the stop-hang).
@@ -448,28 +418,21 @@ final class SpeechEngine {
     /// "final" can't trigger a second rotation (which dropped/duplicated words).
     @ObservationIgnored private var currentRequestID = UUID()
 
-    /// Toggle for verbose recognition diagnostics. Lines are prefixed "[LexSpeech]"
-    /// so they're easy to filter in the Xcode console. Flip to false to silence.
+    /// Toggle for verbose recognition diagnostics. Flip to false to silence.
     static let debugLogging = true
-    @ObservationIgnored private var loggedEngineInfo = false
+    /// os.Logger (not print): lines reach the device's unified log, so they show
+    /// in Xcode's console AND can be pulled later via Console.app / `log collect`
+    /// even when the app wasn't running under Xcode. Filter: subsystem
+    /// "com.yiga.Lexora", category "Speech" (or search "LexSpeech").
+    private static let osLog = os.Logger(subsystem: "com.yiga.Lexora", category: "Speech")
 
     private func slog(_ message: @autoclosure () -> String) {
         guard Self.debugLogging else { return }
-        print("[LexSpeech] \(message())")
+        let line = message()
+        Self.osLog.notice("[LexSpeech] \(line, privacy: .public)")
     }
 
     private func makeRecognitionRequestAndTask() {
-        // Every request gets a FRESH SFSpeechRecognizer. A single recognizer
-        // instance will not run a second concurrent task: after a rotation the
-        // new task started (task != nil) but never delivered a single partial
-        // while the drained task was still attached — on device this froze all
-        // new text after the first 45s handoff. A per-request recognizer gives
-        // the new task a clean instance; the outgoing one keeps its own
-        // recognizer alive via drainingRecognizer until the drain retires.
-        if let locale = recognizer?.locale,
-           let fresh = SFSpeechRecognizer(locale: locale), fresh.isAvailable {
-            recognizer = fresh
-        }
         let request = SFSpeechAudioBufferRecognitionRequest()
         // On-device recognition preferred; fall back to server-based if unsupported.
         request.requiresOnDeviceRecognition = recognizer?.supportsOnDeviceRecognition ?? false
@@ -478,6 +441,7 @@ final class SpeechEngine {
         request.contextualStrings = learningEngine.buildRecognitionHints()
         let id = UUID()
         currentRequestID = id
+        currentRequestStartedAt = Date()
         recognitionRequest = request
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             self?.handleRecognitionResult(result, error: error, requestID: id)
@@ -536,21 +500,9 @@ final class SpeechEngine {
         Task { @MainActor [weak self] in
             guard let self else { return }
 
-            // ── Draining (outgoing) request: its window was ALREADY banked at
-            //    rotation. If it delivers a fuller final, upgrade the banked text to
-            //    recover the tail; otherwise nothing to do — provisional stands.
-            if requestID == drainingRequestID {
-                if isFinal, let text = segmentText {
-                    slog("drain \(requestID.uuidString.prefix(4)) FINAL upgrade=\"\(text.suffix(30))\"")
-                    upgradeDrainedCommit(finalText: text, segments: sfSegments)
-                } else if endedWithError {
-                    slog("drain \(requestID.uuidString.prefix(4)) ended (\(error?.localizedDescription ?? "no final")) — provisional kept")
-                    clearDrainState()
-                }
-                return
-            }
-
             // ── Only the CURRENT request drives the display and rotation.
+            //    Late callbacks from a cancelled (rotated) task carry an old id
+            //    and are dropped here — their window is already banked.
             guard requestID == currentRequestID, isListening else {
                 slog("stale \(requestID.uuidString.prefix(4)) ignored (final=\(isFinal) err=\(endedWithError))")
                 return
