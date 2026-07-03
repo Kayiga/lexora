@@ -360,6 +360,11 @@ final class SpeechEngine {
                         self?.handleModernResult(text, isFinal: isFinal)
                     }
                 },
+                onStreamEnded: { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.recoverModernStreamIfNeeded(language: targetLanguage)
+                    }
+                },
                 log: { [weak self] line in
                     Task { @MainActor [weak self] in self?.slog(line) }
                 }
@@ -586,6 +591,46 @@ final class SpeechEngine {
 
     // MARK: - Result Processing (modern SpeechAnalyzer path, iOS 26+)
 
+    /// The analyzer's result stream died mid-session (error or premature finish).
+    /// Without recovery the mic keeps running but no more text ever arrives.
+    /// Bank what's showing, then rebuild the pipeline and keep dictating.
+    private func recoverModernStreamIfNeeded(language: String) {
+#if compiler(>=6.2)
+        guard isListening, modernCore != nil else { return }   // normal teardown — ignore
+        slog("modern stream died while listening → rebuilding pipeline")
+        appendToCommitted(text: latestSegmentText, segments: latestSegments)
+        latestSegmentText = ""
+        latestSegments = []
+        modernCore = nil
+        if #available(iOS 26.0, *) {
+            Task { @MainActor [weak self] in
+                guard let self, isListening else { return }
+                modernCore = await ModernTranscribeCore.make(
+                    localeIdentifier: language,
+                    onResult: { [weak self] text, isFinal in
+                        Task { @MainActor [weak self] in
+                            self?.handleModernResult(text, isFinal: isFinal)
+                        }
+                    },
+                    onStreamEnded: { [weak self] in
+                        Task { @MainActor [weak self] in
+                            self?.recoverModernStreamIfNeeded(language: language)
+                        }
+                    },
+                    log: { [weak self] line in
+                        Task { @MainActor [weak self] in self?.slog(line) }
+                    }
+                )
+                if modernCore == nil {
+                    slog("modern rebuild FAILED → falling back to legacy request")
+                    makeRecognitionRequestAndTask()
+                    startRotationTimer()
+                }
+            }
+        }
+#endif
+    }
+
     /// Handles a result from the SpeechTranscriber stream.
     /// - volatile (isFinal=false): replaces the current in-flight window.
     /// - finalized (isFinal=true): appended permanently to committedTranscript;
@@ -594,10 +639,17 @@ final class SpeechEngine {
         guard isListening else { return }
 
         if isFinal {
+            // If the analyzer finalises a range as EMPTY while words were showing
+            // as volatile, keep the volatile words — no later result will cover
+            // that audio, so discarding them loses a chunk of dictation.
+            let finalText = text.trimmingCharacters(in: .whitespaces).isEmpty
+                ? latestSegmentText
+                : text
+            slog("final len=\(text.count) volatile=\(latestSegmentText.count) committed+=\(finalText.suffix(25))")
             appendToCommitted(
-                text: text,
-                segments: text.isEmpty ? [] : [TranscriptSegment(
-                    text: text,
+                text: finalText,
+                segments: finalText.isEmpty ? [] : [TranscriptSegment(
+                    text: finalText,
                     startTime: 0, endTime: 0,
                     confidence: 1.0,
                     language: detectedLanguage,
@@ -851,6 +903,7 @@ final class ModernTranscribeCore: @unchecked Sendable {
     static func make(
         localeIdentifier: String,
         onResult: @escaping @Sendable (String, Bool) -> Void,
+        onStreamEnded: @escaping @Sendable () -> Void = {},
         log: @escaping @Sendable (String) -> Void
     ) async -> ModernTranscribeCore? {
         let locale = Locale(identifier: localeIdentifier)
@@ -903,9 +956,11 @@ final class ModernTranscribeCore: @unchecked Sendable {
                         let text = String(result.text.characters)
                         onResult(text, result.isFinal)
                     }
+                    log("SpeechTranscriber results stream finished")
                 } catch {
-                    log("SpeechTranscriber results stream ended: \(error.localizedDescription)")
+                    log("SpeechTranscriber results stream ERROR: \(error.localizedDescription)")
                 }
+                onStreamEnded()
             }
 
             log("SpeechAnalyzer started (format=\(format?.sampleRate ?? 0)Hz)")

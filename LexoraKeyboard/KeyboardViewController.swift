@@ -2,6 +2,12 @@ import UIKit
 import SwiftUI
 import Speech
 import AVFoundation
+import os
+
+/// Unified-log diagnostics for the keyboard — same subsystem as the app, so one
+/// `log collect`/Console.app filter shows both. Search "LexKB".
+private let kbLog = Logger(subsystem: "com.yiga.Lexora", category: "Keyboard")
+private func klog(_ line: String) { kbLog.notice("[LexKB] \(line, privacy: .public)") }
 
 // MARK: - Lightweight profile (decoded from the App Group — no main-app import needed)
 
@@ -49,11 +55,15 @@ class KeyboardViewController: UIInputViewController {
 
     private lazy var profile: KeyboardProfile = loadProfile()
 
+    /// Shown in the UI so a stale cached keyboard binary is instantly visible.
+    static let keyboardBuildTag = "kb-3"
+
     override func viewDidLoad() {
         super.viewDidLoad()
         // Custom-height keyboards must opt into self-sizing, otherwise the
         // system keeps its own height and the layout renders squashed.
         (view as? UIInputView)?.allowsSelfSizing = true
+        klog("viewDidLoad \(Self.keyboardBuildTag) fullAccess=\(hasFullAccess) speechAuth=\(SFSpeechRecognizer.authorizationStatus().rawValue) selfSizing=\((view as? UIInputView)?.allowsSelfSizing ?? false)")
         setupKeyboardUI()
         subscribeToAudioInterruptions()
     }
@@ -138,6 +148,7 @@ class KeyboardViewController: UIInputViewController {
 
     private func startDictation() {
         guard !isListening else { return }
+        klog("startDictation fullAccess=\(hasFullAccess) auth=\(SFSpeechRecognizer.authorizationStatus().rawValue) lang=\(selectedLanguage)")
 
         // The mic and network paths are blocked without "Allow Full Access" —
         // the audio session just throws and the mic appears to do nothing.
@@ -209,6 +220,17 @@ class KeyboardViewController: UIInputViewController {
 
             let inputNode = audioEngine.inputNode
             let format    = inputNode.outputFormat(forBus: 0)
+            klog("mic format sr=\(format.sampleRate) ch=\(format.channelCount)")
+            // In an extension the input can report a 0 Hz / 0-channel format when
+            // the mic isn't actually available — installTap with that format
+            // CRASHES the keyboard process instantly (keyboard dies/goes blank).
+            guard format.sampleRate > 0, format.channelCount > 0 else {
+                klog("mic unavailable (zero format) — aborting start")
+                currentText = "The microphone isn't available to the keyboard. Open the Lexora app, record once, then try again. (Some apps also block keyboard mic access.)"
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                rebuildUI()
+                return
+            }
             inputNode.installTap(onBus: 0, bufferSize: 512, format: format) { [weak self] buffer, _ in
                 self?.recognitionRequest?.append(buffer)
                 let channelData = buffer.floatChannelData?.pointee
@@ -226,13 +248,15 @@ class KeyboardViewController: UIInputViewController {
             audioEngine.prepare()
             try audioEngine.start()
             isListening = true
+            klog("audio engine STARTED — listening")
             if profile.hapticFeedbackEnabled {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
             rebuildUI()
         } catch {
             // Surface the failure — a silent catch here looked like a dead mic button.
-            currentText = "Couldn't start the microphone. Make sure Lexora has mic access (record once in the Lexora app), then try again."
+            klog("audio start FAILED: \(error.localizedDescription)")
+            currentText = "Couldn't start the microphone (\(error.localizedDescription)). Record once in the Lexora app, then try again."
             rebuildUI()
         }
     }
@@ -383,6 +407,15 @@ struct KeyboardRootView: View {
                 .fill(Color(.systemGray6))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
+
+            // Build tag — proves which keyboard binary iOS actually loaded
+            // (keyboards are cached aggressively; stale binaries are common).
+            Text(KeyboardViewController.keyboardBuildTag)
+                .font(.system(size: 8))
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 18)
+                .padding(.top, 10)
 
             VStack(alignment: .leading, spacing: 4) {
                 if currentTranscript.isEmpty {
