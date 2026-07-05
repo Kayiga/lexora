@@ -49,7 +49,12 @@
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 	<true/>
 	<key>UIBackgroundModes</key>
-	<array/>
+	<array>
+		<!-- Keep capturing audio when the screen locks or the user switches
+		     apps mid-dictation. Without this, iOS suspends the app on lock and
+		     transcription silently stops while the Live Activity keeps ticking. -->
+		<string>audio</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
